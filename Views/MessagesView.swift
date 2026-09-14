@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct MessagesView: View {
-    
+
     @Environment(BayanihanController.self) private var controller
-    
+
     private var messageRequests: [CommunityRequest] {
         controller.requests.filter { request in
             request.helperName != nil &&
@@ -13,7 +13,7 @@ struct MessagesView: View {
             )
         }
     }
-    
+
     var body: some View {
 
         ZStack {
@@ -24,21 +24,21 @@ struct MessagesView: View {
                 blue: 0.97
             )
             .ignoresSafeArea()
-                
+
                 if messageRequests.isEmpty {
-                    
+
                     EmptyMessagesView()
-                    
+
                 } else {
-                    
+
                     ScrollView(showsIndicators: false) {
-                        
+
                         VStack(
                             alignment: .leading,
                             spacing: 0
                         ) {
-                            
-                            Text("Your Conversations")
+
+                            Text("Messages")
                                 .font(
                                     .system(
                                         size: 22,
@@ -47,41 +47,45 @@ struct MessagesView: View {
                                 )
                                 .foregroundStyle(.black)
                                 .padding(.top, 15)
-                            
+
                             Text(
                                 "Stay connected while helping your community."
                             )
                             .font(.system(size: 9))
                             .foregroundStyle(.gray)
                             .padding(.top, 4)
-                            
+
                             LazyVStack(
                                 spacing: 9
                             ) {
-                                
+
                                 ForEach(messageRequests) { request in
-                                    
+
                                     NavigationLink {
-                                        
+
                                         ChatView(
                                             request: request
                                         )
-                                        
+
                                     } label: {
-                                        
+
                                         MessageConversationRow(
                                             request: request,
                                             currentUserName:
                                                 controller.currentUser.name,
                                             currentUsername:
-                                                controller.currentUser.username
+                                                controller.currentUser.username,
+                                            lastMessage:
+                                                controller.messages(
+                                                    for: request.id
+                                                ).last
                                         )
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
                             .padding(.top, 18)
-                            
+
                             Spacer(minLength: 30)
                         }
                         .padding(.horizontal, 20)
@@ -97,35 +101,48 @@ struct MessagesView: View {
 // MARK: - Conversation Row
 
 struct MessageConversationRow: View {
-    
+
     let request: CommunityRequest
     let currentUserName: String
     let currentUsername: String
-    
+    let lastMessage: ChatMessage?
+
     private var otherPersonName: String {
-        
+
         if request.requesterUsername == currentUsername {
             return request.helperName ?? "Community Helper"
         }
-        
+
         return request.requesterName
     }
-    
-    private var conversationSubtitle: String {
-        
+
+    private var previewText: String {
+
+        if let lastMessage {
+            return lastMessage.text
+        }
+
         if request.status == .completed {
             return "Request completed"
         }
-        
-        return request.title
+
+        return "Say hello to start the conversation."
     }
-    
+
+    // Prototype note: there is no per-message read state in the current
+    // model, so this reuses the same "in discussion" signal HomeView and
+    // ProfileView already use for their unread message badge, applied
+    // here at the row level instead of just a count.
+    private var isUnread: Bool {
+        request.status == .inDiscussion
+    }
+
     var body: some View {
-        
-        HStack(spacing: 11) {
-            
+
+        HStack(alignment: .top, spacing: 11) {
+
             ZStack {
-                
+
                 Circle()
                     .fill(
                         Color(
@@ -134,7 +151,7 @@ struct MessageConversationRow: View {
                             blue: 0.90
                         )
                     )
-                
+
                 Text(
                     initials(otherPersonName)
                 )
@@ -156,35 +173,54 @@ struct MessageConversationRow: View {
                 width: 45,
                 height: 45
             )
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 4
             ) {
-                
-                Text(otherPersonName)
-                    .font(
-                        .system(
-                            size: 10,
-                            weight: .bold
+
+                HStack {
+
+                    Text(otherPersonName)
+                        .font(
+                            .system(
+                                size: 10,
+                                weight: .bold
+                            )
                         )
-                    )
-                    .foregroundStyle(.black)
-                
-                Text(conversationSubtitle)
+                        .foregroundStyle(.black)
+
+                    Spacer()
+
+                    if let lastMessage {
+
+                        Text(lastMessage.time)
+                            .font(.system(size: 7))
+                            .foregroundStyle(.gray)
+                    }
+                }
+
+                Text(previewText)
                     .font(.system(size: 8))
                     .foregroundStyle(.gray)
                     .lineLimit(1)
-                
+
                 HStack(spacing: 5) {
-                    
+
                     Image(
                         systemName: request.category.icon
                     )
                     .font(.system(size: 7))
-                    
+
                     Text(request.category.rawValue)
                         .font(.system(size: 7))
+
+                    Text("·")
+                        .font(.system(size: 7))
+
+                    Text(request.title)
+                        .font(.system(size: 7))
+                        .lineLimit(1)
                 }
                 .foregroundStyle(
                     Color(
@@ -194,47 +230,73 @@ struct MessageConversationRow: View {
                     )
                 )
             }
-            
-            Spacer()
-            
-            Image(
-                systemName: "chevron.right"
-            )
-            .font(
-                .system(
-                    size: 9,
-                    weight: .semibold
+
+            if isUnread {
+
+                Circle()
+                    .fill(
+                        Color(
+                            red: 0.00,
+                            green: 0.55,
+                            blue: 0.45
+                        )
+                    )
+                    .frame(
+                        width: 8,
+                        height: 8
+                    )
+                    .padding(.top, 3)
+
+            } else {
+
+                Image(
+                    systemName: "chevron.right"
                 )
-            )
-            .foregroundStyle(.gray.opacity(0.6))
+                .font(
+                    .system(
+                        size: 9,
+                        weight: .semibold
+                    )
+                )
+                .foregroundStyle(.gray.opacity(0.6))
+                .padding(.top, 3)
+            }
         }
         .padding(.horizontal, 13)
-        .frame(height: 73)
-        .background(.white)
+        .padding(.vertical, 13)
+        .background(
+            isUnread
+                ? Color(
+                    red: 0.00,
+                    green: 0.55,
+                    blue: 0.45
+                ).opacity(0.05)
+                : Color.white
+        )
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 14
             )
         )
     }
-    
-    
+
+
     // MARK: - Initials
-    
+
     private func initials(
         _ name: String
     ) -> String {
-        
+
         let words = name.split(separator: " ")
-        
+
         let letters = words.prefix(2).compactMap {
             $0.first
         }
-        
+
         if letters.isEmpty {
             return "?"
         }
-        
+
         return String(letters)
     }
 }
@@ -243,11 +305,11 @@ struct MessageConversationRow: View {
 // MARK: - Empty Messages
 
 struct EmptyMessagesView: View {
-    
+
     var body: some View {
-        
+
         VStack(spacing: 10) {
-            
+
             Image(
                 systemName: "bubble.left.and.bubble.right"
             )
@@ -255,7 +317,7 @@ struct EmptyMessagesView: View {
             .foregroundStyle(
                 .gray.opacity(0.45)
             )
-            
+
             Text("No Messages Yet")
                 .font(
                     .system(
@@ -264,9 +326,9 @@ struct EmptyMessagesView: View {
                     )
                 )
                 .foregroundStyle(.black)
-            
+
             Text(
-                "Your conversations with community members will appear here."
+                "Your conversations with the community will appear here."
             )
             .font(.system(size: 9))
             .foregroundStyle(.gray)
@@ -284,7 +346,7 @@ struct EmptyMessagesView: View {
 // MARK: - Preview
 
 #Preview {
-    
+
     MessagesView()
         .environment(BayanihanController())
 }

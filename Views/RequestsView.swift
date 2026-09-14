@@ -6,20 +6,21 @@ struct RequestsView: View {
     
     @State private var selectedCategory: RequestCategory? = nil
     @State private var selectedUrgency: RequestUrgency? = nil
+    @State private var selectedSort: RequestSort = .newest
     @State private var searchText = ""
-    
+
     private var filteredRequests: [CommunityRequest] {
-        
-        controller.requests.filter { request in
-            
+
+        let matching = controller.requests.filter { request in
+
             let matchesCategory =
                 selectedCategory == nil ||
                 request.category == selectedCategory
-            
+
             let matchesUrgency =
                 selectedUrgency == nil ||
                 request.urgency == selectedUrgency
-            
+
             let matchesSearch =
                 searchText.trimmingCharacters(
                     in: .whitespacesAndNewlines
@@ -27,11 +28,67 @@ struct RequestsView: View {
                 request.title.localizedCaseInsensitiveContains(searchText) ||
                 request.description.localizedCaseInsensitiveContains(searchText) ||
                 request.location.localizedCaseInsensitiveContains(searchText)
-            
+
             return matchesCategory &&
                 matchesUrgency &&
                 matchesSearch &&
                 request.status != .completed
+        }
+
+        return sorted(matching)
+    }
+
+    private var isFilterActive: Bool {
+        selectedCategory != nil || selectedSort != .newest
+    }
+
+
+    // MARK: - Sorting
+
+    private func sorted(
+        _ requests: [CommunityRequest]
+    ) -> [CommunityRequest] {
+
+        switch selectedSort {
+
+        case .newest:
+            return requests.sorted {
+                $0.createdAt > $1.createdAt
+            }
+
+        case .oldest:
+            return requests.sorted {
+                $0.createdAt < $1.createdAt
+            }
+
+        case .urgentFirst:
+            return requests.sorted { lhs, rhs in
+
+                let lhsRank = urgencyRank(lhs.urgency)
+                let rhsRank = urgencyRank(rhs.urgency)
+
+                if lhsRank != rhsRank {
+                    return lhsRank > rhsRank
+                }
+
+                return lhs.createdAt > rhs.createdAt
+            }
+        }
+    }
+
+    private func urgencyRank(
+        _ urgency: RequestUrgency
+    ) -> Int {
+
+        switch urgency {
+        case .normal:
+            return 0
+
+        case .urgent:
+            return 1
+
+        case .emergency:
+            return 2
         }
     }
     
@@ -118,66 +175,10 @@ struct RequestsView: View {
                         .padding(.top, 17)
                         
                         
-                        // MARK: - Category Filter
-                        
-                        Text("Category")
-                            .font(
-                                .system(
-                                    size: 10,
-                                    weight: .bold
-                                )
-                            )
-                            .foregroundStyle(.black)
-                            .padding(.top, 17)
-                        
-                        ScrollView(
-                            .horizontal,
-                            showsIndicators: false
-                        ) {
-                            
-                            HStack(spacing: 7) {
-                                
-                                FilterChip(
-                                    title: "All",
-                                    icon: "square.grid.2x2.fill",
-                                    isSelected:
-                                        selectedCategory == nil
-                                ) {
-                                    selectedCategory = nil
-                                }
-                                
-                                ForEach(
-                                    RequestCategory.allCases
-                                ) { category in
-                                    
-                                    FilterChip(
-                                        title: category.rawValue,
-                                        icon: category.icon,
-                                        isSelected:
-                                            selectedCategory == category
-                                    ) {
-                                        selectedCategory = category
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.top, 8)
-                        
-                        
-                        // MARK: - Urgency Filter
-                        
-                        Text("Urgency")
-                            .font(
-                                .system(
-                                    size: 10,
-                                    weight: .bold
-                                )
-                            )
-                            .foregroundStyle(.black)
-                            .padding(.top, 16)
-                        
+                        // MARK: - Filters
+
                         HStack(spacing: 7) {
-                            
+
                             UrgencyFilterChip(
                                 title: "All",
                                 isSelected:
@@ -185,21 +186,64 @@ struct RequestsView: View {
                             ) {
                                 selectedUrgency = nil
                             }
-                            
-                            ForEach(
-                                RequestUrgency.allCases
-                            ) { urgency in
-                                
-                                UrgencyFilterChip(
-                                    title: urgency.rawValue,
-                                    isSelected:
-                                        selectedUrgency == urgency
-                                ) {
-                                    selectedUrgency = urgency
-                                }
+
+                            UrgencyFilterChip(
+                                title: "Urgent",
+                                isSelected:
+                                    selectedUrgency == .urgent
+                            ) {
+                                selectedUrgency = .urgent
                             }
+
+                            NavigationLink {
+
+                                FilterSearchView(
+                                    selectedCategory: $selectedCategory,
+                                    selectedSort: $selectedSort
+                                )
+
+                            } label: {
+
+                                HStack(spacing: 5) {
+
+                                    Image(
+                                        systemName: "line.3.horizontal.decrease"
+                                    )
+                                    .font(.system(size: 8))
+
+                                    Text("Filter")
+                                        .font(
+                                            .system(
+                                                size: 8,
+                                                weight: .semibold
+                                            )
+                                        )
+                                }
+                                .foregroundStyle(
+                                    isFilterActive
+                                        ? .white
+                                        : .black
+                                )
+                                .padding(.horizontal, 10)
+                                .frame(height: 31)
+                                .background(
+                                    isFilterActive
+                                        ? Color(
+                                            red: 0.00,
+                                            green: 0.55,
+                                            blue: 0.45
+                                        )
+                                        : Color.white
+                                )
+                                .clipShape(
+                                    RoundedRectangle(
+                                        cornerRadius: 9
+                                    )
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .padding(.top, 8)
+                        .padding(.top, 17)
                         
                         
                         // MARK: - Results
@@ -318,24 +362,18 @@ struct CommunityRequestCard: View {
                     alignment: .leading,
                     spacing: 4
                 ) {
-                    
-                    Text(
-                        request.category.rawValue.uppercased()
-                    )
-                    .font(
-                        .system(
-                            size: 6,
-                            weight: .bold
+
+                    HStack(spacing: 5) {
+
+                        UrgencyBadge(
+                            urgency: request.urgency
                         )
-                    )
-                    .foregroundStyle(
-                        Color(
-                            red: 0.00,
-                            green: 0.55,
-                            blue: 0.45
+
+                        MyRequestStatusBadge(
+                            status: request.status
                         )
-                    )
-                    
+                    }
+
                     Text(request.title)
                         .font(
                             .system(
@@ -346,12 +384,8 @@ struct CommunityRequestCard: View {
                         .foregroundStyle(.black)
                         .lineLimit(2)
                 }
-                
+
                 Spacer()
-                
-                UrgencyBadge(
-                    urgency: request.urgency
-                )
             }
             
             
@@ -407,6 +441,10 @@ struct CommunityRequestCard: View {
                 )
             }
             .foregroundStyle(.gray)
+
+            Text(timeAgo)
+                .font(.system(size: 6))
+                .foregroundStyle(.gray.opacity(0.7))
         }
         .padding(13)
         .background(.white)
@@ -416,63 +454,42 @@ struct CommunityRequestCard: View {
             )
         )
     }
-}
 
 
-// MARK: - Filter Chip
+    // MARK: - Time Ago
 
-struct FilterChip: View {
-    
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        
-        Button {
-            action()
-        } label: {
-            
-            HStack(spacing: 5) {
-                
-                Image(systemName: icon)
-                    .font(.system(size: 8))
-                
-                Text(title)
-                    .font(
-                        .system(
-                            size: 8,
-                            weight: .semibold
-                        )
-                    )
-            }
-            .foregroundStyle(
-                isSelected
-                    ? .white
-                    : .black
-            )
-            .padding(.horizontal, 10)
-            .frame(height: 31)
-            .background(
-                isSelected
-                    ? Color(
-                        red: 0.00,
-                        green: 0.55,
-                        blue: 0.45
-                    )
-                    : Color.white
-            )
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: 9
-                )
-            )
+    private var timeAgo: String {
+
+        let interval = Date().timeIntervalSince(request.createdAt)
+
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
+        let days = Int(interval / 86400)
+
+        if minutes < 1 {
+            return "Just now"
+
+        } else if minutes < 60 {
+            return "\(minutes)m ago"
+
+        } else if hours < 24 {
+            return "\(hours)h ago"
+
+        } else if days == 1 {
+            return "Yesterday"
+
+        } else if days < 7 {
+            return "\(days)d ago"
+
+        } else {
+
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+
+            return formatter.string(from: request.createdAt)
         }
-        .buttonStyle(.plain)
     }
 }
-
 
 // MARK: - Urgency Filter Chip
 

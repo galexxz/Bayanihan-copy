@@ -7,35 +7,67 @@ struct NotificationsView: View {
     private var notifications: [CommunityNotification] {
         controller.notifications
     }
-    
+
+    private func associatedRequest(
+        for notification: CommunityNotification
+    ) -> CommunityRequest? {
+
+        controller.requests.first { request in
+            notification.message.contains(request.title)
+        }
+    }
+
     var body: some View {
-        
+
         ZStack {
-            
+
             Color(
                 red: 0.95,
                 green: 0.98,
                 blue: 0.97
             )
             .ignoresSafeArea()
-            
+
             if notifications.isEmpty {
-                
+
                 EmptyNotificationsView()
-                
+
             } else {
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     LazyVStack(
                         spacing: 10
                     ) {
-                        
+
                         ForEach(notifications) { notification in
-                            
-                            NotificationRow(
-                                notification: notification
+
+                            let request = associatedRequest(
+                                for: notification
                             )
+
+                            if let request {
+
+                                NavigationLink {
+
+                                    RequestDetailsView(
+                                        request: request
+                                    )
+
+                                } label: {
+
+                                    NotificationRow(
+                                        notification: notification
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                            } else {
+
+                                NotificationRow(
+                                    notification: notification
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
@@ -111,9 +143,7 @@ struct NotificationRow: View {
                     .foregroundStyle(.gray)
                     .lineSpacing(2)
                 
-                Text(
-                    relativeDate(notification.date)
-                )
+                Text(timeAgo)
                 .font(.system(size: 7))
                 .foregroundStyle(.gray.opacity(0.8))
             }
@@ -155,17 +185,38 @@ struct NotificationRow: View {
     }
     
     
-    private func relativeDate(
-        _ date: Date
-    ) -> String {
-        
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        
-        return formatter.localizedString(
-            for: date,
-            relativeTo: Date()
-        )
+    // MARK: - Time Ago
+
+    private var timeAgo: String {
+
+        let interval = Date().timeIntervalSince(notification.date)
+
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
+        let days = Int(interval / 86400)
+
+        if minutes < 1 {
+            return "Just now"
+
+        } else if minutes < 60 {
+            return "\(minutes)m ago"
+
+        } else if hours < 24 {
+            return "\(hours)h ago"
+
+        } else if days == 1 {
+            return "Yesterday"
+
+        } else if days < 7 {
+            return "\(days)d ago"
+
+        } else {
+
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+
+            return formatter.string(from: notification.date)
+        }
     }
 }
 
@@ -184,7 +235,7 @@ struct EmptyNotificationsView: View {
             .font(.system(size: 32))
             .foregroundStyle(.gray.opacity(0.5))
             
-            Text("No Notifications")
+            Text("No Notifications Yet")
                 .font(
                     .system(
                         size: 14,
@@ -192,9 +243,9 @@ struct EmptyNotificationsView: View {
                     )
                 )
                 .foregroundStyle(.black)
-            
+
             Text(
-                "You'll see updates about your requests and community activity here."
+                "Updates about your requests and help will appear here."
             )
             .font(.system(size: 9))
             .foregroundStyle(.gray)

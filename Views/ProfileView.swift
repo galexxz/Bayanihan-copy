@@ -1,15 +1,17 @@
 import SwiftUI
 
 struct ProfileView: View {
-    
+
     @Environment(BayanihanController.self) private var controller
-    
+
+    @State private var showSignOutConfirmation = false
+
     private var myRequestsCount: Int {
         controller.requests.filter {
             $0.requesterUsername == controller.currentUser.username
         }.count
     }
-    
+
     private var helpedCount: Int {
         controller.requests.filter {
             $0.helperName == controller.currentUser.name
@@ -23,58 +25,85 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        
+
         NavigationStack {
-            
+
             ZStack {
-                
+
                 Color(
                     red: 0.95,
                     green: 0.98,
                     blue: 0.97
                 )
                 .ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     VStack(spacing: 0) {
-                        
-                        // MARK: - Profile Header
-                        
-                        ZStack {
-                            
-                            Circle()
-                                .fill(
-                                    Color(
-                                        red: 0.84,
-                                        green: 0.93,
-                                        blue: 0.90
-                                    )
-                                )
-                            
-                            Text(
-                                initials(controller.currentUser.name)
+
+                        // MARK: - Cover & Avatar
+
+                        ZStack(alignment: .bottom) {
+
+                            RoundedRectangle(
+                                cornerRadius: 20
                             )
-                            .font(
-                                .system(
-                                    size: 25,
-                                    weight: .bold
-                                )
-                            )
-                            .foregroundStyle(
+                            .fill(
                                 Color(
                                     red: 0.00,
                                     green: 0.55,
                                     blue: 0.45
                                 )
                             )
+                            .frame(height: 85)
+
+                            ZStack {
+
+                                Circle()
+                                    .fill(
+                                        Color(
+                                            red: 0.84,
+                                            green: 0.93,
+                                            blue: 0.90
+                                        )
+                                    )
+
+                                Text(
+                                    initials(controller.currentUser.name)
+                                )
+                                .font(
+                                    .system(
+                                        size: 25,
+                                        weight: .bold
+                                    )
+                                )
+                                .foregroundStyle(
+                                    Color(
+                                        red: 0.00,
+                                        green: 0.55,
+                                        blue: 0.45
+                                    )
+                                )
+                            }
+                            .frame(
+                                width: 82,
+                                height: 82
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        Color(
+                                            red: 0.95,
+                                            green: 0.98,
+                                            blue: 0.97
+                                        ),
+                                        lineWidth: 4
+                                    )
+                            )
+                            .offset(y: 41)
                         }
-                        .frame(
-                            width: 82,
-                            height: 82
-                        )
-                        .padding(.top, 25)
-                        
+                        .padding(.top, 10)
+
                         Text(controller.currentUser.name)
                             .font(
                                 .system(
@@ -83,41 +112,59 @@ struct ProfileView: View {
                                 )
                             )
                             .foregroundStyle(.black)
-                            .padding(.top, 10)
-                        
+                            .padding(.top, 49)
+
                         Text(controller.currentUser.username)
                             .font(.system(size: 9))
                             .foregroundStyle(.gray)
                             .padding(.top, 3)
-                        
-                        
+
+                        HStack(spacing: 4) {
+
+                            Image(
+                                systemName: "mappin.and.ellipse"
+                            )
+                            .font(.system(size: 8))
+
+                            Text(controller.currentUser.location)
+                                .font(.system(size: 8))
+                        }
+                        .foregroundStyle(.gray)
+                        .padding(.top, 4)
+
+
                         // MARK: - Stats
-                        
+
                         HStack(spacing: 9) {
-                            
+
                             ProfileStatCard(
                                 value: "\(myRequestsCount)",
-                                title: "Requests"
+                                title: "Posted"
                             )
-                            
+
                             ProfileStatCard(
                                 value: "\(helpedCount)",
                                 title: "Helped"
                             )
+
+                            ProfileStatCard(
+                                value: "\(controller.currentUser.communityPoints)",
+                                title: "Points"
+                            )
                         }
                         .padding(.top, 20)
-                        
-                        
+
+
                         // MARK: - Menu
-                        
+
                         VStack(spacing: 9) {
-                            
+
                             NavigationLink {
-                                
+
                                 MyRequestsView()
-                                
+
                             } label: {
-                                
+
                                 ProfileMenuRow(
                                     icon: "hand.raised.fill",
                                     title: "My Requests",
@@ -125,23 +172,25 @@ struct ProfileView: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                            
-                            
+
+
                             NavigationLink {
-                                
-                                ActivityView()
-                                
+
+                                MyRequestsView(
+                                    showHelped: true
+                                )
+
                             } label: {
-                                
+
                                 ProfileMenuRow(
-                                    icon: "clock.arrow.circlepath",
-                                    title: "Activity",
-                                    subtitle: "See your community activity"
+                                    icon: "hands.sparkles.fill",
+                                    title: "Helped Requests",
+                                    subtitle: "View requests you're helping with"
                                 )
                             }
                             .buttonStyle(.plain)
-                            
-                            
+
+
                             NavigationLink {
 
                                 MessagesView()
@@ -171,14 +220,14 @@ struct ProfileView: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                            
-                            
+
+
                             NavigationLink {
-                                
+
                                 SettingsView()
-                                
+
                             } label: {
-                                
+
                                 ProfileMenuRow(
                                     icon: "gearshape.fill",
                                     title: "Settings",
@@ -188,12 +237,49 @@ struct ProfileView: View {
                             .buttonStyle(.plain)
                         }
                         .padding(.top, 22)
-                        
-                        
+
+
+                        // MARK: - Log Out
+
+                        Button {
+                            showSignOutConfirmation = true
+                        } label: {
+
+                            HStack {
+
+                                Image(
+                                    systemName: "rectangle.portrait.and.arrow.right"
+                                )
+                                .font(.system(size: 12))
+
+                                Text("Log Out")
+                                    .font(
+                                        .system(
+                                            size: 10,
+                                            weight: .semibold
+                                        )
+                                    )
+
+                                Spacer()
+                            }
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 15)
+                            .frame(height: 50)
+                            .background(.white)
+                            .clipShape(
+                                RoundedRectangle(
+                                    cornerRadius: 13
+                                )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 12)
+
+
                         // MARK: - Community Message
-                        
+
                         VStack(spacing: 7) {
-                            
+
                             Image(
                                 systemName: "hands.sparkles.fill"
                             )
@@ -205,7 +291,7 @@ struct ProfileView: View {
                                     blue: 0.45
                                 )
                             )
-                            
+
                             Text(
                                 "Together, we make our community stronger."
                             )
@@ -217,7 +303,7 @@ struct ProfileView: View {
                             )
                             .foregroundStyle(.black)
                             .multilineTextAlignment(.center)
-                            
+
                             Text(
                                 "Every small act of help matters."
                             )
@@ -243,7 +329,7 @@ struct ProfileView: View {
                             )
                         )
                         .padding(.top, 22)
-                        
+
                         Spacer(minLength: 30)
                     }
                     .padding(.horizontal, 20)
@@ -251,26 +337,45 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .alert(
+                "Sign Out?",
+                isPresented: $showSignOutConfirmation
+            ) {
+
+                Button("Cancel", role: .cancel) {
+
+                }
+
+                Button("Sign Out", role: .destructive) {
+                    controller.logout()
+                }
+
+            } message: {
+
+                Text(
+                    "Are you sure you want to sign out of Bayanihan?"
+                )
+            }
         }
     }
-    
-    
+
+
     // MARK: - Initials
-    
+
     private func initials(
         _ name: String
     ) -> String {
-        
+
         let words = name.split(separator: " ")
-        
+
         let letters = words.prefix(2).compactMap {
             $0.first
         }
-        
+
         if letters.isEmpty {
             return "?"
         }
-        
+
         return String(letters)
     }
 }
@@ -279,14 +384,14 @@ struct ProfileView: View {
 // MARK: - Profile Stat Card
 
 struct ProfileStatCard: View {
-    
+
     let value: String
     let title: String
-    
+
     var body: some View {
-        
+
         VStack(spacing: 4) {
-            
+
             Text(value)
                 .font(
                     .system(
@@ -301,7 +406,7 @@ struct ProfileStatCard: View {
                         blue: 0.45
                     )
                 )
-            
+
             Text(title)
                 .font(.system(size: 7))
                 .foregroundStyle(.gray)
@@ -330,11 +435,11 @@ struct ProfileMenuRow: View {
     var badgeCount: Int = 0
 
     var body: some View {
-        
+
         HStack(spacing: 11) {
-            
+
             ZStack {
-                
+
                 RoundedRectangle(
                     cornerRadius: 9
                 )
@@ -345,7 +450,7 @@ struct ProfileMenuRow: View {
                         blue: 0.90
                     )
                 )
-                
+
                 Image(systemName: icon)
                     .font(.system(size: 11))
                     .foregroundStyle(
@@ -360,12 +465,12 @@ struct ProfileMenuRow: View {
                 width: 39,
                 height: 39
             )
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 3
             ) {
-                
+
                 Text(title)
                     .font(
                         .system(
@@ -374,12 +479,12 @@ struct ProfileMenuRow: View {
                         )
                     )
                     .foregroundStyle(.black)
-                
+
                 Text(subtitle)
                     .font(.system(size: 7))
                     .foregroundStyle(.gray)
             }
-            
+
             Spacer()
 
             if badgeCount > 0 {
@@ -432,7 +537,7 @@ struct ProfileMenuRow: View {
 // MARK: - Preview
 
 #Preview {
-    
+
     ProfileView()
         .environment(BayanihanController())
 }

@@ -1,98 +1,128 @@
 import SwiftUI
 
 struct SettingsView: View {
-    
+
     @Environment(BayanihanController.self) private var controller
-    
-    @State private var notificationsEnabled = true
-    @State private var locationEnabled = true
+
+    @State private var isDarkModeEnabled = false
     @State private var showSignOutConfirmation = false
-    
+    @State private var showAboutSheet = false
+
     var body: some View {
-        
+
         ZStack {
-            
+
             Color(
                 red: 0.95,
                 green: 0.98,
                 blue: 0.97
             )
             .ignoresSafeArea()
-            
+
             ScrollView(showsIndicators: false) {
-                
+
                 VStack(
                     alignment: .leading,
                     spacing: 0
                 ) {
-                        
-                    // MARK: - Account Information
-                        
+
+                    // MARK: - General
+
+                    SettingsSectionTitle(
+                        title: "General"
+                    )
+                    .padding(.top, 15)
+
+                    VStack(spacing: 0) {
+
+                        NavigationLink {
+
+                            NotificationsView()
+
+                        } label: {
+
+                            SettingsNavigationRow(
+                                title: "Notifications",
+                                icon: "bell.fill"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+                            .padding(.leading, 52)
+
+                        SettingsToggleRow(
+                            title: "Dark Mode",
+                            subtitle: "Switch to a darker appearance",
+                            icon: "moon.fill",
+                            isOn: $isDarkModeEnabled
+                        )
+
+                        Divider()
+                            .padding(.leading, 52)
+
+                        SettingsInfoRow(
+                            title: "Language",
+                            value: "English",
+                            icon: "globe"
+                        )
+                    }
+                    .background(.white)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 15
+                        )
+                    )
+                    .padding(.top, 10)
+
+
+                    // MARK: - Account
+
                     SettingsSectionTitle(
                         title: "Account"
                     )
-                    .padding(.top, 15)
-                        
-                    VStack(spacing: 0) {
-                            
-                        SettingsInfoRow(
-                            title: "Name",
-                            value: controller.currentUser.name,
-                            icon: "person.fill"
-                        )
-                            
-                        Divider()
-                            .padding(.leading, 52)
-                            
-                        SettingsInfoRow(
-                            title: "Username",
-                            value: controller.currentUser.username,
-                            icon: "at"
-                        )
-                            
-                        Divider()
-                            .padding(.leading, 52)
-                            
-                        SettingsInfoRow(
-                            title: "Location",
-                            value: controller.currentUser.location,
-                            icon: "mappin.and.ellipse"
-                        )
-                    }
-                    .background(.white)
-                    .clipShape(
-                        RoundedRectangle(
-                            cornerRadius: 15
-                        )
-                    )
-                    .padding(.top, 10)
-                    
-                    
-                    // MARK: - Preferences
-                        
-                    SettingsSectionTitle(
-                        title: "Preferences"
-                    )
                     .padding(.top, 23)
-                        
+
                     VStack(spacing: 0) {
-                            
-                        SettingsToggleRow(
-                            title: "Notifications",
-                            subtitle: "Receive updates about your requests",
-                            icon: "bell.fill",
-                            isOn: $notificationsEnabled
-                        )
-                            
+
+                        Button {
+                            // Privacy & Security will be added later.
+                        } label: {
+
+                            SettingsNavigationRow(
+                                title: "Privacy & Security",
+                                icon: "lock.shield.fill"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
                         Divider()
                             .padding(.leading, 52)
-                            
-                        SettingsToggleRow(
-                            title: "Location Services",
-                            subtitle: "Help show requests near you",
-                            icon: "location.fill",
-                            isOn: $locationEnabled
-                        )
+
+                        Button {
+                            // Help & Support will be added later.
+                        } label: {
+
+                            SettingsNavigationRow(
+                                title: "Help & Support",
+                                icon: "questionmark.circle.fill"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+                            .padding(.leading, 52)
+
+                        Button {
+                            showAboutSheet = true
+                        } label: {
+
+                            SettingsNavigationRow(
+                                title: "About Bayanihan",
+                                icon: "info.circle.fill"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .background(.white)
                     .clipShape(
@@ -101,54 +131,21 @@ struct SettingsView: View {
                         )
                     )
                     .padding(.top, 10)
-                    
-                    
-                    // MARK: - About
-                        
-                    SettingsSectionTitle(
-                        title: "About"
-                    )
-                    .padding(.top, 23)
-                        
-                    VStack(spacing: 0) {
-                            
-                        SettingsInfoRow(
-                            title: "App Version",
-                            value: "1.0.0",
-                            icon: "info.circle.fill"
-                        )
-                            
-                        Divider()
-                            .padding(.leading, 52)
-                            
-                        SettingsInfoRow(
-                            title: "Community",
-                            value: "Bayanihan",
-                            icon: "person.3.fill"
-                        )
-                    }
-                    .background(.white)
-                    .clipShape(
-                        RoundedRectangle(
-                            cornerRadius: 15
-                        )
-                    )
-                    .padding(.top, 10)
-                    
-                    
+
+
                     // MARK: - Sign Out
-                        
+
                     Button {
                         showSignOutConfirmation = true
                     } label: {
-                            
+
                         HStack {
-                                
+
                             Image(
                                 systemName: "rectangle.portrait.and.arrow.right"
                             )
                             .font(.system(size: 12))
-                                
+
                             Text("Sign Out")
                                 .font(
                                     .system(
@@ -156,7 +153,7 @@ struct SettingsView: View {
                                         weight: .semibold
                                     )
                                 )
-                                
+
                             Spacer()
                         }
                         .foregroundStyle(.red)
@@ -171,7 +168,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 23)
-                    
+
                     Spacer(minLength: 30)
                 }
                 .padding(.horizontal, 20)
@@ -179,21 +176,24 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAboutSheet) {
+            AboutBayanihanView()
+        }
         .alert(
             "Sign Out?",
             isPresented: $showSignOutConfirmation
         ) {
-            
+
             Button("Cancel", role: .cancel) {
-                
+
             }
-            
+
             Button("Sign Out", role: .destructive) {
                 controller.logout()
             }
-            
+
         } message: {
-            
+
             Text(
                 "Are you sure you want to sign out of Bayanihan?"
             )
@@ -205,11 +205,11 @@ struct SettingsView: View {
 // MARK: - Section Title
 
 struct SettingsSectionTitle: View {
-    
+
     let title: String
-    
+
     var body: some View {
-        
+
         Text(title)
             .font(
                 .system(
@@ -225,15 +225,15 @@ struct SettingsSectionTitle: View {
 // MARK: - Information Row
 
 struct SettingsInfoRow: View {
-    
+
     let title: String
     let value: String
     let icon: String
-    
+
     var body: some View {
-        
+
         HStack(spacing: 11) {
-            
+
             Image(
                 systemName: icon
             )
@@ -262,12 +262,12 @@ struct SettingsInfoRow: View {
                     cornerRadius: 8
                 )
             )
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 3
             ) {
-                
+
                 Text(title)
                     .font(
                         .system(
@@ -276,12 +276,12 @@ struct SettingsInfoRow: View {
                         )
                     )
                     .foregroundStyle(.black)
-                
+
                 Text(value)
                     .font(.system(size: 8))
                     .foregroundStyle(.gray)
             }
-            
+
             Spacer()
         }
         .padding(.horizontal, 13)
@@ -293,17 +293,17 @@ struct SettingsInfoRow: View {
 // MARK: - Toggle Row
 
 struct SettingsToggleRow: View {
-    
+
     let title: String
     let subtitle: String
     let icon: String
-    
+
     @Binding var isOn: Bool
-    
+
     var body: some View {
-        
+
         HStack(spacing: 11) {
-            
+
             Image(
                 systemName: icon
             )
@@ -332,12 +332,12 @@ struct SettingsToggleRow: View {
                     cornerRadius: 8
                 )
             )
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 3
             ) {
-                
+
                 Text(title)
                     .font(
                         .system(
@@ -346,14 +346,14 @@ struct SettingsToggleRow: View {
                         )
                     )
                     .foregroundStyle(.black)
-                
+
                 Text(subtitle)
                     .font(.system(size: 7))
                     .foregroundStyle(.gray)
             }
-            
+
             Spacer()
-            
+
             Toggle(
                 "",
                 isOn: $isOn
@@ -373,12 +373,160 @@ struct SettingsToggleRow: View {
 }
 
 
+// MARK: - Navigation Row
+
+struct SettingsNavigationRow: View {
+
+    let title: String
+    let icon: String
+
+    var body: some View {
+
+        HStack(spacing: 11) {
+
+            Image(
+                systemName: icon
+            )
+            .font(.system(size: 11))
+            .foregroundStyle(
+                Color(
+                    red: 0.00,
+                    green: 0.55,
+                    blue: 0.45
+                )
+            )
+            .frame(
+                width: 31,
+                height: 31
+            )
+            .background(
+                Color(
+                    red: 0.00,
+                    green: 0.55,
+                    blue: 0.45
+                )
+                .opacity(0.10)
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: 8
+                )
+            )
+
+            Text(title)
+                .font(
+                    .system(
+                        size: 9,
+                        weight: .semibold
+                    )
+                )
+                .foregroundStyle(.black)
+
+            Spacer()
+
+            Image(
+                systemName: "chevron.right"
+            )
+            .font(
+                .system(
+                    size: 9,
+                    weight: .semibold
+                )
+            )
+            .foregroundStyle(.gray.opacity(0.6))
+        }
+        .padding(.horizontal, 13)
+        .frame(height: 58)
+    }
+}
+
+
+// MARK: - About Bayanihan
+
+struct AboutBayanihanView: View {
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+
+        NavigationStack {
+
+            ZStack {
+
+                Color(
+                    red: 0.95,
+                    green: 0.98,
+                    blue: 0.97
+                )
+                .ignoresSafeArea()
+
+                VStack(spacing: 10) {
+
+                    Image(
+                        systemName: "heart.fill"
+                    )
+                    .font(.system(size: 38))
+                    .foregroundStyle(
+                        Color(
+                            red: 0.00,
+                            green: 0.55,
+                            blue: 0.45
+                        )
+                    )
+                    .padding(.top, 40)
+
+                    Text("Bayanihan")
+                        .font(
+                            .system(
+                                size: 20,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(.black)
+
+                    Text("Community Assistance Platform")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.gray)
+
+                    Text("Version 1.0.0")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.gray)
+                        .padding(.top, 4)
+
+                    Text(
+                        "Bayanihan connects neighbors who need help with community members willing to lend a hand — together, we make our community stronger."
+                    )
+                    .font(.system(size: 9))
+                    .foregroundStyle(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 35)
+                    .padding(.top, 14)
+
+                    Spacer()
+                }
+            }
+            .navigationTitle("About")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+
+                ToolbarItem(placement: .confirmationAction) {
+
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 // MARK: - Preview
 
 #Preview {
-    
+
     NavigationStack {
-        
+
         SettingsView()
             .environment(BayanihanController())
     }

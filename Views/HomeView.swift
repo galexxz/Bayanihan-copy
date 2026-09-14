@@ -1,15 +1,36 @@
 import SwiftUI
 
 struct HomeView: View {
-    
+
     @Environment(BayanihanController.self) private var controller
-    
+
+    @State private var searchText = ""
+    @State private var showOnlyUrgent = false
+
     private var openRequests: [CommunityRequest] {
         controller.requests.filter {
             $0.status == .open
         }
     }
-    
+
+    private var filteredOpenRequests: [CommunityRequest] {
+        openRequests.filter { request in
+
+            let matchesSearch =
+                searchText.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                ).isEmpty ||
+                request.title.localizedCaseInsensitiveContains(searchText) ||
+                request.location.localizedCaseInsensitiveContains(searchText)
+
+            let matchesUrgency =
+                !showOnlyUrgent ||
+                request.urgency == .urgent
+
+            return matchesSearch && matchesUrgency
+        }
+    }
+
     private var activeHelpRequests: [CommunityRequest] {
         controller.requests.filter {
             $0.status == .inDiscussion ||
@@ -18,121 +39,278 @@ struct HomeView: View {
         }
     }
 
-    @State private var showPostRequest = false
+    private var unreadMessageCount: Int {
+        controller.requests.filter {
+            $0.status == .inDiscussion
+        }.count
+    }
+
+    private var greeting: String {
+
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 0..<12:
+            return "Good morning,"
+
+        case 12..<17:
+            return "Good afternoon,"
+
+        default:
+            return "Good evening,"
+        }
+    }
 
     var body: some View {
-        
+
         NavigationStack {
-            
+
             ZStack {
-                
+
                 Color(
                     red: 0.95,
                     green: 0.98,
                     blue: 0.97
                 )
                 .ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     VStack(
                         alignment: .leading,
                         spacing: 0
                     ) {
-                        
+
                         // MARK: - Header
-                        
+
                         HStack {
-                            
+
                             VStack(
                                 alignment: .leading,
                                 spacing: 4
                             ) {
-                                
-                                Text("Good day,")
+
+                                Text(greeting)
                                     .font(.system(size: 9))
                                     .foregroundStyle(.gray)
-                                
-                                Text(controller.currentUser.name)
+
+                                Text(
+                                    "\(controller.currentUser.name)! 👋"
+                                )
+                                .font(
+                                    .system(
+                                        size: 21,
+                                        weight: .bold
+                                    )
+                                )
+                                .foregroundStyle(.black)
+                            }
+
+                            Spacer()
+
+                            HStack(spacing: 10) {
+
+                                NavigationLink {
+
+                                    NotificationsView()
+
+                                } label: {
+
+                                    Image(
+                                        systemName: "bell"
+                                    )
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(.black)
+                                    .frame(
+                                        width: 40,
+                                        height: 40
+                                    )
+                                    .background(.white)
+                                    .clipShape(Circle())
+                                }
+                                .buttonStyle(.plain)
+
+                                NavigationLink {
+
+                                    MessagesView()
+
+                                } label: {
+
+                                    Image(
+                                        systemName: "bubble.left.and.bubble.right.fill"
+                                    )
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.black)
+                                    .frame(
+                                        width: 40,
+                                        height: 40
+                                    )
+                                    .background(.white)
+                                    .clipShape(Circle())
+                                    .overlay(alignment: .topTrailing) {
+
+                                        if unreadMessageCount > 0 {
+
+                                            Text("\(unreadMessageCount)")
+                                                .font(
+                                                    .system(
+                                                        size: 7,
+                                                        weight: .bold
+                                                    )
+                                                )
+                                                .foregroundStyle(.white)
+                                                .frame(
+                                                    minWidth: 15,
+                                                    minHeight: 15
+                                                )
+                                                .background(
+                                                    Color(
+                                                        red: 0.00,
+                                                        green: 0.55,
+                                                        blue: 0.45
+                                                    )
+                                                )
+                                                .clipShape(Circle())
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+
+                                ZStack {
+
+                                    Circle()
+                                        .fill(
+                                            Color(
+                                                red: 0.84,
+                                                green: 0.93,
+                                                blue: 0.90
+                                            )
+                                        )
+
+                                    Text(
+                                        initials(controller.currentUser.name)
+                                    )
                                     .font(
                                         .system(
-                                            size: 21,
+                                            size: 13,
                                             weight: .bold
                                         )
                                     )
-                                    .foregroundStyle(.black)
-                            }
-                            
-                            Spacer()
-                            
-                            NavigationLink {
-                                
-                                NotificationsView()
-                                
-                            } label: {
-                                
-                                Image(
-                                    systemName: "bell"
-                                )
-                                .font(.system(size: 15))
-                                .foregroundStyle(.black)
+                                    .foregroundStyle(
+                                        Color(
+                                            red: 0.00,
+                                            green: 0.55,
+                                            blue: 0.45
+                                        )
+                                    )
+                                }
                                 .frame(
                                     width: 40,
                                     height: 40
                                 )
-                                .background(.white)
-                                .clipShape(Circle())
                             }
-                            .buttonStyle(.plain)
                         }
                         .padding(.top, 15)
-                        
-                        
-                        // MARK: - Welcome Card
-                        
-                        VStack(
-                            alignment: .leading,
-                            spacing: 10
-                        ) {
-                            
-                            HStack {
-                                
-                                VStack(
-                                    alignment: .leading,
-                                    spacing: 7
-                                ) {
-                                    
-                                    Text("Together,")
-                                        .font(
-                                            .system(
-                                                size: 18,
-                                                weight: .bold
-                                            )
-                                        )
-                                        .foregroundStyle(.white)
-                                    
-                                    Text(
-                                        "we can make a difference."
+
+
+                        // MARK: - Search
+
+                        HStack(spacing: 8) {
+
+                            Image(
+                                systemName: "magnifyingglass"
+                            )
+                            .font(.system(size: 10))
+                            .foregroundStyle(.gray)
+
+                            TextField(
+                                "Search requests...",
+                                text: $searchText
+                            )
+                            .font(.system(size: 9))
+                            .foregroundStyle(.black)
+
+                            if !searchText.isEmpty {
+
+                                Button {
+                                    searchText = ""
+                                } label: {
+
+                                    Image(
+                                        systemName: "xmark.circle.fill"
                                     )
                                     .font(.system(size: 10))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    
-                                    Text(
-                                        "Help a neighbor. Ask for help. Build a stronger community."
-                                    )
-                                    .font(.system(size: 8))
-                                    .foregroundStyle(.white.opacity(0.85))
-                                    .lineLimit(2)
+                                    .foregroundStyle(.gray)
                                 }
-                                
-                                Spacer()
-                                
-                                Image(
-                                    systemName: "hands.sparkles.fill"
-                                )
-                                .font(.system(size: 38))
-                                .foregroundStyle(.white.opacity(0.9))
+                                .buttonStyle(.plain)
                             }
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(height: 43)
+                        .background(.white)
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius: 11
+                            )
+                        )
+                        .padding(.top, 17)
+
+
+                        // MARK: - Filters
+
+                        HStack(spacing: 7) {
+
+                            UrgencyFilterChip(
+                                title: "All",
+                                isSelected: !showOnlyUrgent
+                            ) {
+                                showOnlyUrgent = false
+                            }
+
+                            UrgencyFilterChip(
+                                title: "Urgent",
+                                isSelected: showOnlyUrgent
+                            ) {
+                                showOnlyUrgent = true
+                            }
+                        }
+                        .padding(.top, 10)
+
+
+                        // MARK: - Welcome Card
+
+                        HStack {
+
+                            VStack(
+                                alignment: .leading,
+                                spacing: 7
+                            ) {
+
+                                Text(
+                                    "Stronger Communities Through Bayanihan"
+                                )
+                                .font(
+                                    .system(
+                                        size: 15,
+                                        weight: .bold
+                                    )
+                                )
+                                .foregroundStyle(.white)
+                                .fixedSize(
+                                    horizontal: false,
+                                    vertical: true
+                                )
+
+                                Text("Help · Support · Unite")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.white.opacity(0.9))
+                            }
+
+                            Spacer()
+
+                            Image(
+                                systemName: "hands.sparkles.fill"
+                            )
+                            .font(.system(size: 34))
+                            .foregroundStyle(.white.opacity(0.9))
                         }
                         .padding(18)
                         .background(
@@ -148,88 +326,13 @@ struct HomeView: View {
                             )
                         )
                         .padding(.top, 20)
-                        
-                        
-                        // MARK: - Quick Actions
-                        
-                        Text("Quick Actions")
-                            .font(
-                                .system(
-                                    size: 14,
-                                    weight: .bold
-                                )
-                            )
-                            .foregroundStyle(.black)
-                            .padding(.top, 23)
-                        
-                        HStack(spacing: 10) {
-                            
-                            Button {
-                                showPostRequest = true
-                            } label: {
 
-                                HomeActionCard(
-                                    title: "Ask for Help",
-                                    subtitle: "Post a request",
-                                    icon: "megaphone.fill"
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            
-                            NavigationLink {
-                                
-                                RequestsView()
-                                
-                            } label: {
-                                
-                                HomeActionCard(
-                                    title: "Help Others",
-                                    subtitle: "Find requests",
-                                    icon: "hands.sparkles.fill"
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.top, 11)
-                        
-                        
-                        // MARK: - Community Stats
-                        
-                        Text("Your Impact")
-                            .font(
-                                .system(
-                                    size: 14,
-                                    weight: .bold
-                                )
-                            )
-                            .foregroundStyle(.black)
-                            .padding(.top, 24)
-                        
-                        HStack(spacing: 9) {
-                            
-                            ImpactCard(
-                                value: "\(controller.currentUser.requestsHelped)",
-                                title: "Helped"
-                            )
-                            
-                            ImpactCard(
-                                value: "\(controller.currentUser.requestsPosted)",
-                                title: "Posted"
-                            )
-                            
-                            ImpactCard(
-                                value: "\(controller.currentUser.communityPoints)",
-                                title: "Points"
-                            )
-                        }
-                        .padding(.top, 11)
-                        
-                        
-                        // MARK: - Open Requests
-                        
+
+                        // MARK: - Recent Requests
+
                         HStack {
-                            
-                            Text("Requests Near You")
+
+                            Text("Recent Requests")
                                 .font(
                                     .system(
                                         size: 14,
@@ -237,15 +340,15 @@ struct HomeView: View {
                                     )
                                 )
                                 .foregroundStyle(.black)
-                            
+
                             Spacer()
-                            
+
                             NavigationLink {
-                                
+
                                 RequestsView()
-                                
+
                             } label: {
-                                
+
                                 Text("See All")
                                     .font(
                                         .system(
@@ -263,33 +366,33 @@ struct HomeView: View {
                             }
                         }
                         .padding(.top, 24)
-                        
-                        
+
+
                         if openRequests.isEmpty {
-                            
+
                             HomeEmptyRequestView()
                                 .padding(.top, 12)
-                            
+
                         } else {
-                            
+
                             LazyVStack(
                                 spacing: 10
                             ) {
-                                
+
                                 ForEach(
                                     Array(
-                                        openRequests.prefix(3)
+                                        filteredOpenRequests.prefix(3)
                                     )
                                 ) { request in
-                                    
+
                                     NavigationLink {
-                                        
+
                                         RequestDetailsView(
                                             request: request
                                         )
-                                        
+
                                     } label: {
-                                        
+
                                         HomeRequestCard(
                                             request: request
                                         )
@@ -299,12 +402,12 @@ struct HomeView: View {
                             }
                             .padding(.top, 11)
                         }
-                        
-                        
+
+
                         // MARK: - Active Help
-                        
+
                         if !activeHelpRequests.isEmpty {
-                            
+
                             Text("Your Active Help")
                                 .font(
                                     .system(
@@ -314,25 +417,25 @@ struct HomeView: View {
                                 )
                                 .foregroundStyle(.black)
                                 .padding(.top, 24)
-                            
+
                             LazyVStack(
                                 spacing: 10
                             ) {
-                                
+
                                 ForEach(
                                     Array(
                                         activeHelpRequests.prefix(2)
                                     )
                                 ) { request in
-                                    
+
                                     NavigationLink {
-                                        
+
                                         HelpStatusView(
                                             request: request
                                         )
-                                        
+
                                     } label: {
-                                        
+
                                         ActiveHelpCard(
                                             request: request
                                         )
@@ -342,7 +445,39 @@ struct HomeView: View {
                             }
                             .padding(.top, 11)
                         }
-                        
+
+
+                        // MARK: - Community Stats
+
+                        Text("Your Impact")
+                            .font(
+                                .system(
+                                    size: 14,
+                                    weight: .bold
+                                )
+                            )
+                            .foregroundStyle(.black)
+                            .padding(.top, 24)
+
+                        HStack(spacing: 9) {
+
+                            ImpactCard(
+                                value: "\(controller.currentUser.requestsPosted)",
+                                title: "Posted"
+                            )
+
+                            ImpactCard(
+                                value: "\(controller.currentUser.requestsHelped)",
+                                title: "Helped"
+                            )
+
+                            ImpactCard(
+                                value: "\(controller.currentUser.communityPoints)",
+                                title: "Points"
+                            )
+                        }
+                        .padding(.top, 11)
+
                         Spacer(minLength: 35)
                     }
                     .padding(.horizontal, 20)
@@ -350,64 +485,27 @@ struct HomeView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showPostRequest) {
-                PostRequestView()
-            }
         }
     }
-}
 
 
-// MARK: - Home Action Card
+    // MARK: - Initials
 
-struct HomeActionCard: View {
-    
-    let title: String
-    let subtitle: String
-    let icon: String
-    
-    var body: some View {
-        
-        VStack(
-            alignment: .leading,
-            spacing: 7
-        ) {
-            
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(
-                    Color(
-                        red: 0.00,
-                        green: 0.55,
-                        blue: 0.45
-                    )
-                )
-            
-            Text(title)
-                .font(
-                    .system(
-                        size: 10,
-                        weight: .bold
-                    )
-                )
-                .foregroundStyle(.black)
-            
-            Text(subtitle)
-                .font(.system(size: 8))
-                .foregroundStyle(.gray)
+    private func initials(
+        _ name: String
+    ) -> String {
+
+        let words = name.split(separator: " ")
+
+        let letters = words.prefix(2).compactMap {
+            $0.first
         }
-        .frame(
-            maxWidth: .infinity,
-            alignment: .leading
-        )
-        .frame(height: 105)
-        .padding(14)
-        .background(.white)
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 14
-            )
-        )
+
+        if letters.isEmpty {
+            return "?"
+        }
+
+        return String(letters)
     }
 }
 
@@ -415,14 +513,14 @@ struct HomeActionCard: View {
 // MARK: - Impact Card
 
 struct ImpactCard: View {
-    
+
     let value: String
     let title: String
-    
+
     var body: some View {
-        
+
         VStack(spacing: 5) {
-            
+
             Text(value)
                 .font(
                     .system(
@@ -437,7 +535,7 @@ struct ImpactCard: View {
                         blue: 0.45
                     )
                 )
-            
+
             Text(title)
                 .font(.system(size: 8))
                 .foregroundStyle(.gray)
@@ -459,15 +557,15 @@ struct ImpactCard: View {
 // MARK: - Home Request Card
 
 struct HomeRequestCard: View {
-    
+
     let request: CommunityRequest
-    
+
     var body: some View {
-        
+
         HStack(spacing: 12) {
-            
+
             ZStack {
-                
+
                 RoundedRectangle(
                     cornerRadius: 11
                 )
@@ -478,7 +576,7 @@ struct HomeRequestCard: View {
                         blue: 0.90
                     )
                 )
-                
+
                 Image(
                     systemName: request.category.icon
                 )
@@ -495,27 +593,23 @@ struct HomeRequestCard: View {
                 width: 55,
                 height: 55
             )
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 5
             ) {
-                
-                Text(request.category.rawValue)
-                    .font(
-                        .system(
-                            size: 7,
-                            weight: .bold
-                        )
+
+                HStack(spacing: 5) {
+
+                    UrgencyBadge(
+                        urgency: request.urgency
                     )
-                    .foregroundStyle(
-                        Color(
-                            red: 0.00,
-                            green: 0.55,
-                            blue: 0.45
-                        )
+
+                    MyRequestStatusBadge(
+                        status: request.status
                     )
-                
+                }
+
                 Text(request.title)
                     .font(
                         .system(
@@ -525,17 +619,21 @@ struct HomeRequestCard: View {
                     )
                     .foregroundStyle(.black)
                     .lineLimit(1)
-                
+
                 Label(
                     request.location,
                     systemImage: "mappin.and.ellipse"
                 )
                 .font(.system(size: 7))
                 .foregroundStyle(.gray)
+
+                Text(timeAgo)
+                    .font(.system(size: 7))
+                    .foregroundStyle(.gray.opacity(0.8))
             }
-            
+
             Spacer()
-            
+
             Image(
                 systemName: "chevron.right"
             )
@@ -550,19 +648,33 @@ struct HomeRequestCard: View {
             )
         )
     }
+
+
+    // MARK: - Time Ago
+
+    private var timeAgo: String {
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+
+        return formatter.localizedString(
+            for: request.createdAt,
+            relativeTo: Date()
+        )
+    }
 }
 
 
 // MARK: - Active Help Card
 
 struct ActiveHelpCard: View {
-    
+
     let request: CommunityRequest
-    
+
     var body: some View {
-        
+
         HStack(spacing: 11) {
-            
+
             Image(
                 systemName: "hands.sparkles.fill"
             )
@@ -586,12 +698,12 @@ struct ActiveHelpCard: View {
                 )
             )
             .clipShape(Circle())
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 4
             ) {
-                
+
                 Text(request.title)
                     .font(
                         .system(
@@ -601,7 +713,7 @@ struct ActiveHelpCard: View {
                     )
                     .foregroundStyle(.black)
                     .lineLimit(1)
-                
+
                 Text(
                     request.helperName == nil
                         ? "Help is being arranged"
@@ -609,7 +721,7 @@ struct ActiveHelpCard: View {
                 )
                 .font(.system(size: 8))
                 .foregroundStyle(.gray)
-                
+
                 Text(request.status.rawValue)
                     .font(
                         .system(
@@ -625,9 +737,9 @@ struct ActiveHelpCard: View {
                         )
                     )
             }
-            
+
             Spacer()
-            
+
             Image(
                 systemName: "chevron.right"
             )
@@ -648,17 +760,17 @@ struct ActiveHelpCard: View {
 // MARK: - Empty Requests
 
 struct HomeEmptyRequestView: View {
-    
+
     var body: some View {
-        
+
         VStack(spacing: 8) {
-            
+
             Image(
                 systemName: "hands.sparkles"
             )
             .font(.system(size: 25))
             .foregroundStyle(.gray.opacity(0.5))
-            
+
             Text("No open requests right now")
                 .font(
                     .system(
@@ -667,7 +779,7 @@ struct HomeEmptyRequestView: View {
                     )
                 )
                 .foregroundStyle(.black)
-            
+
             Text(
                 "Check again later or post a request yourself."
             )
@@ -686,7 +798,7 @@ struct HomeEmptyRequestView: View {
 // MARK: - Preview
 
 #Preview {
-    
+
     HomeView()
         .environment(BayanihanController())
 }

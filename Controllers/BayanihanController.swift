@@ -90,23 +90,47 @@ final class BayanihanController {
         
         CommunityActivity(
             id: UUID(),
-            message: "You volunteered to help Maria Santos.",
+            message: "Volunteered to help Maria Santos.",
             date: Date(),
             type: .volunteered
         ),
-        
+
         CommunityActivity(
             id: UUID(),
-            message: "You posted “School Supplies for Children.”",
+            message: "Posted “School Supplies for Children.”",
             date: Date().addingTimeInterval(-3600),
             type: .posted
         ),
-        
+
         CommunityActivity(
             id: UUID(),
-            message: "You completed a community helping activity.",
+            message: "Completed a community helping activity.",
             date: Date().addingTimeInterval(-7200),
             type: .volunteered
+        ),
+
+        CommunityActivity(
+            id: UUID(),
+            message: "Volunteered to help with “Groceries for a Senior Citizen.”",
+            date: Date().addingTimeInterval(-5400),
+            type: .volunteered,
+            actorName: "Maria Santos"
+        ),
+
+        CommunityActivity(
+            id: UUID(),
+            message: "Posted “Medical Supplies Needed.”",
+            date: Date().addingTimeInterval(-14400),
+            type: .posted,
+            actorName: "Juan Dela Cruz"
+        ),
+
+        CommunityActivity(
+            id: UUID(),
+            message: "Completed a community clean-up.",
+            date: Date().addingTimeInterval(-86400),
+            type: .volunteered,
+            actorName: "Ana Reyes"
         )
     ]
 
@@ -176,6 +200,16 @@ final class BayanihanController {
         )
 
         currentUser.requestsPosted += 1
+
+        activities.insert(
+            CommunityActivity(
+                id: UUID(),
+                message: "Posted “\(newRequest.title).”",
+                date: Date(),
+                type: .posted
+            ),
+            at: 0
+        )
     }
     
     
@@ -209,7 +243,7 @@ final class BayanihanController {
         activities.insert(
             CommunityActivity(
                 id: UUID(),
-                message: "You offered to help with “\(requests[index].title)”.",
+                message: "Offered to help with “\(requests[index].title)”.",
                 date: Date(),
                 type: .volunteered
             ),
@@ -357,7 +391,7 @@ final class BayanihanController {
         activities.insert(
             CommunityActivity(
                 id: UUID(),
-                message: "You completed “\(requests[index].title)”.",
+                message: "Completed “\(requests[index].title)”.",
                 date: Date(),
                 type: .volunteered
             ),
@@ -403,11 +437,15 @@ final class BayanihanController {
 
     func updateProfile(
         name: String,
-        username: String
+        username: String,
+        email: String,
+        location: String
     ) {
 
         currentUser.name = name
         currentUser.username = username
+        currentUser.email = email
+        currentUser.location = location
     }
 
 

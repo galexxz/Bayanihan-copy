@@ -7,8 +7,11 @@ struct EditProfileView: View {
     
     @State private var name = ""
     @State private var username = ""
-    
+    @State private var email = ""
+    @State private var location = ""
+
     @State private var showSaveAlert = false
+    @State private var showValidationAlert = false
     @State private var validationMessage = ""
     
     var body: some View {
@@ -143,8 +146,70 @@ struct EditProfileView: View {
                         )
                     )
                     .padding(.top, 8)
-                    
-                    
+
+
+                    // MARK: - Email
+
+                    Text("Email")
+                        .font(
+                            .system(
+                                size: 10,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(.black)
+                        .padding(.top, 17)
+
+                    TextField(
+                        "Enter your email",
+                        text: $email
+                    )
+                    .font(.system(size: 9))
+                    .foregroundStyle(.black)
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .padding(.horizontal, 12)
+                    .frame(height: 45)
+                    .background(.white)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 11
+                        )
+                    )
+                    .padding(.top, 8)
+
+
+                    // MARK: - Location
+
+                    Text("Location")
+                        .font(
+                            .system(
+                                size: 10,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(.black)
+                        .padding(.top, 17)
+
+                    TextField(
+                        "Enter your location",
+                        text: $location
+                    )
+                    .font(.system(size: 9))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 12)
+                    .frame(height: 45)
+                    .background(.white)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 11
+                        )
+                    )
+                    .padding(.top, 8)
+
+
                     // MARK: - Save
                     
                     Button {
@@ -206,8 +271,21 @@ struct EditProfileView: View {
             }
             
         } message: {
-            
+
             Text("Your profile information has been updated.")
+        }
+        .alert(
+            "Unable to Save Changes",
+            isPresented: $showValidationAlert
+        ) {
+
+            Button("OK", role: .cancel) {
+
+            }
+
+        } message: {
+
+            Text(validationMessage)
         }
     }
     
@@ -217,6 +295,8 @@ struct EditProfileView: View {
     private func loadProfile() {
         name = controller.currentUser.name
         username = controller.currentUser.username
+        email = controller.currentUser.email
+        location = controller.currentUser.location
     }
     
     
@@ -233,23 +313,63 @@ struct EditProfileView: View {
             .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
-        
+
+        let cleanEmail = email
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        let cleanLocation = location
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
         guard !cleanName.isEmpty else {
-            validationMessage = "Please enter your name."
+            showValidation(
+                "Please enter your name."
+            )
             return
         }
-        
+
         guard !cleanUsername.isEmpty else {
-            validationMessage = "Please enter a username."
+            showValidation(
+                "Please enter a username."
+            )
             return
         }
-        
+
+        guard !cleanEmail.isEmpty else {
+            showValidation(
+                "Please enter your email."
+            )
+            return
+        }
+
+        guard !cleanLocation.isEmpty else {
+            showValidation(
+                "Please enter your location."
+            )
+            return
+        }
+
         controller.updateProfile(
             name: cleanName,
-            username: cleanUsername
+            username: cleanUsername,
+            email: cleanEmail,
+            location: cleanLocation
         )
-        
+
         showSaveAlert = true
+    }
+
+
+    // MARK: - Validation
+
+    private func showValidation(
+        _ message: String
+    ) {
+        validationMessage = message
+        showValidationAlert = true
     }
     
     

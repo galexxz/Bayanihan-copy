@@ -25,21 +25,40 @@ struct SignUpView: View {
             
             ScrollView {
                 VStack(spacing: 0) {
-                    
+
+                    // MARK: - Branding
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                Color(
+                                    red: 0.00,
+                                    green: 0.55,
+                                    blue: 0.45
+                                )
+                            )
+
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 56, height: 56)
+                    .padding(.top, 24)
+
                     // MARK: - Header
-                    
+
                     VStack(spacing: 8) {
                         Text("Create an Account")
                             .font(.system(size: 27, weight: .bold))
                             .foregroundStyle(.black)
-                        
+
                         Text("Join Bayanihan and start helping your community.")
                             .font(.system(size: 13))
                             .foregroundStyle(.gray)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 25)
                     }
-                    .padding(.top, 35)
+                    .padding(.top, 16)
                     
                     // MARK: - Form
                     
@@ -254,7 +273,20 @@ struct SignUpView: View {
                     }
                     .font(.system(size: 12))
                     .padding(.top, 20)
-                    .padding(.bottom, 25)
+
+                    // MARK: - Footer
+
+                    Text("Bayanihan · Community Assistance Platform")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(
+                            Color(
+                                red: 0.35,
+                                green: 0.68,
+                                blue: 0.62
+                            )
+                        )
+                        .padding(.top, 18)
+                        .padding(.bottom, 20)
                 }
             }
         }

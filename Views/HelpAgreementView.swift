@@ -3,6 +3,7 @@ import SwiftUI
 struct HelpAgreementView: View {
 
     @Environment(BayanihanController.self) private var controller
+    @Environment(\.dismiss) private var dismiss
 
     let request: CommunityRequest
 
@@ -15,6 +16,7 @@ struct HelpAgreementView: View {
 
     @State private var showValidationAlert = false
     @State private var validationMessage = ""
+    @State private var showConfirmedScreen = false
 
     private var isRequester: Bool {
         request.requesterUsername == controller.currentUser.username
@@ -22,6 +24,10 @@ struct HelpAgreementView: View {
 
     private var existingAgreement: HelpAgreement? {
         controller.agreement(for: request.id)
+    }
+
+    private var helperDisplayName: String {
+        request.helperName ?? controller.currentUser.name
     }
 
     var body: some View {
@@ -42,6 +48,125 @@ struct HelpAgreementView: View {
                     spacing: 0
                 ) {
 
+                    // MARK: - Header
+
+                    Text("Help Agreement")
+                        .font(
+                            .system(
+                                size: 22,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(.black)
+                        .padding(.top, 15)
+
+                    HStack(spacing: 4) {
+
+                        Text("Agreement between")
+                            .foregroundStyle(.gray)
+
+                        Text(request.requesterName)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.black)
+
+                        Text("and")
+                            .foregroundStyle(.gray)
+
+                        Text(helperDisplayName)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.black)
+                    }
+                    .font(.system(size: 9))
+                    .padding(.top, 4)
+
+
+                    // MARK: - Request Info Box
+
+                    VStack(
+                        alignment: .leading,
+                        spacing: 10
+                    ) {
+
+                        HStack(spacing: 8) {
+
+                            Image(
+                                systemName: request.category.icon
+                            )
+                            .font(.system(size: 11))
+                            .foregroundStyle(
+                                Color(
+                                    red: 0.00,
+                                    green: 0.55,
+                                    blue: 0.45
+                                )
+                            )
+
+                            Text(request.title)
+                                .font(
+                                    .system(
+                                        size: 11,
+                                        weight: .bold
+                                    )
+                                )
+                                .foregroundStyle(.black)
+                                .lineLimit(2)
+
+                            Spacer()
+
+                            Text(
+                                request.status.rawValue.uppercased()
+                            )
+                            .font(
+                                .system(
+                                    size: 6,
+                                    weight: .bold
+                                )
+                            )
+                            .foregroundStyle(
+                                Color(
+                                    red: 0.00,
+                                    green: 0.55,
+                                    blue: 0.45
+                                )
+                            )
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 5)
+                            .background(
+                                Color(
+                                    red: 0.00,
+                                    green: 0.55,
+                                    blue: 0.45
+                                )
+                                .opacity(0.10)
+                            )
+                            .clipShape(Capsule())
+                        }
+
+                        HStack(spacing: 12) {
+
+                            Label(
+                                request.category.rawValue,
+                                systemImage: "tag.fill"
+                            )
+
+                            Label(
+                                request.location,
+                                systemImage: "mappin.and.ellipse"
+                            )
+                        }
+                        .font(.system(size: 7))
+                        .foregroundStyle(.gray)
+                    }
+                    .padding(14)
+                    .background(.white)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 14
+                        )
+                    )
+                    .padding(.top, 14)
+
+
                     if let agreement = existingAgreement {
 
                         agreementSummary(agreement)
@@ -60,6 +185,13 @@ struct HelpAgreementView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             loadDefaults()
+        }
+        .navigationDestination(
+            isPresented: $showConfirmedScreen
+        ) {
+            HelpConfirmedView(
+                request: request
+            )
         }
         .alert(
             "Unable to Save Agreement",
@@ -96,24 +228,17 @@ struct HelpAgreementView: View {
             spacing: 0
         ) {
 
-            // MARK: - Header
+            // MARK: - Section Title
 
-            Text("Help Agreement")
+            Text("Agreement Details")
                 .font(
                     .system(
-                        size: 22,
+                        size: 13,
                         weight: .bold
                     )
                 )
                 .foregroundStyle(.black)
-                .padding(.top, 15)
-
-            Text(
-                "Set the details for “\(request.title).”"
-            )
-            .font(.system(size: 9))
-            .foregroundStyle(.gray)
-            .padding(.top, 4)
+                .padding(.top, 22)
 
 
             // MARK: - Description
@@ -121,7 +246,7 @@ struct HelpAgreementView: View {
             FormFieldTitle(
                 title: "Help Description"
             )
-            .padding(.top, 20)
+            .padding(.top, 12)
 
             TextField(
                 "Describe what the helper will do...",
@@ -302,6 +427,12 @@ struct HelpAgreementView: View {
             }
 
 
+            // MARK: - Warning Note
+
+            warningNote
+                .padding(.top, 20)
+
+
             // MARK: - Save
 
             Button {
@@ -341,7 +472,10 @@ struct HelpAgreementView: View {
                 )
             }
             .buttonStyle(.plain)
-            .padding(.top, 23)
+            .padding(.top, 20)
+
+            cancelLink
+                .padding(.top, 12)
         }
     }
 
@@ -436,43 +570,12 @@ struct HelpAgreementView: View {
             spacing: 0
         ) {
 
-            // MARK: - Header
-
-            Text("Help Agreement")
-                .font(
-                    .system(
-                        size: 22,
-                        weight: .bold
-                    )
-                )
-                .foregroundStyle(.black)
-                .padding(.top, 15)
-
-            Text(
-                "Review the arrangement for this request."
-            )
-            .font(.system(size: 9))
-            .foregroundStyle(.gray)
-            .padding(.top, 4)
-
-
             // MARK: - Summary Card
 
             VStack(
                 alignment: .leading,
                 spacing: 12
             ) {
-
-                Text(request.title)
-                    .font(
-                        .system(
-                            size: 13,
-                            weight: .bold
-                        )
-                    )
-                    .foregroundStyle(.black)
-
-                Divider()
 
                 DetailInfoRow(
                     icon: "person.fill",
@@ -509,18 +612,6 @@ struct HelpAgreementView: View {
                     title: "Location",
                     value: agreement.location
                 )
-
-                DetailInfoRow(
-                    icon: "arrow.left.arrow.right",
-                    title: "Exchange / Reimbursement",
-                    value: exchangeSummary(agreement)
-                )
-
-                DetailInfoRow(
-                    icon: "creditcard.fill",
-                    title: "Payment Status",
-                    value: agreement.paymentStatus.rawValue
-                )
             }
             .padding(14)
             .background(.white)
@@ -529,7 +620,23 @@ struct HelpAgreementView: View {
                     cornerRadius: 14
                 )
             )
-            .padding(.top, 10)
+            .padding(.top, 20)
+
+
+            // MARK: - Reimbursement
+
+            Text("Reimbursement")
+                .font(
+                    .system(
+                        size: 13,
+                        weight: .bold
+                    )
+                )
+                .foregroundStyle(.black)
+                .padding(.top, 23)
+
+            reimbursementCard(agreement)
+                .padding(.top, 10)
 
 
             // MARK: - Confirmation Status
@@ -565,10 +672,16 @@ struct HelpAgreementView: View {
 
             if isRequester && !agreement.isConfirmed {
 
+                warningNote
+                    .padding(.top, 20)
+
                 Button {
                     controller.confirmAgreement(
                         for: request.id
                     )
+
+                    showConfirmedScreen = true
+
                 } label: {
 
                     HStack(spacing: 8) {
@@ -604,7 +717,10 @@ struct HelpAgreementView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .padding(.top, 23)
+                .padding(.top, 14)
+
+                cancelLink
+                    .padding(.top, 12)
             }
 
 
@@ -661,17 +777,194 @@ struct HelpAgreementView: View {
     }
 
 
-    // MARK: - Exchange Summary
+    // MARK: - Reimbursement Card
 
-    private func exchangeSummary(
+    private func reimbursementCard(
         _ agreement: HelpAgreement
-    ) -> String {
+    ) -> some View {
 
-        guard agreement.exchangeType != .noPayment else {
-            return agreement.exchangeType.rawValue
+        HStack {
+
+            if agreement.exchangeType == .noPayment {
+
+                HStack(spacing: 8) {
+
+                    Image(
+                        systemName: "heart.fill"
+                    )
+                    .foregroundStyle(
+                        Color(
+                            red: 0.00,
+                            green: 0.55,
+                            blue: 0.45
+                        )
+                    )
+
+                    Text("No reimbursement")
+                        .font(
+                            .system(
+                                size: 10,
+                                weight: .semibold
+                            )
+                        )
+                        .foregroundStyle(.black)
+                }
+
+                Spacer()
+
+            } else {
+
+                VStack(
+                    alignment: .leading,
+                    spacing: 3
+                ) {
+
+                    Text(
+                        formattedAmount(agreement.amount)
+                    )
+                    .font(
+                        .system(
+                            size: 17,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundStyle(
+                        Color(
+                            red: 0.00,
+                            green: 0.55,
+                            blue: 0.45
+                        )
+                    )
+
+                    Text(agreement.exchangeType.rawValue)
+                        .font(.system(size: 8))
+                        .foregroundStyle(.gray)
+                }
+
+                Spacer()
+
+                Text(
+                    agreement.paymentStatus.rawValue.uppercased()
+                )
+                .font(
+                    .system(
+                        size: 7,
+                        weight: .bold
+                    )
+                )
+                .foregroundStyle(
+                    paymentStatusColor(agreement.paymentStatus)
+                )
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(
+                    paymentStatusColor(agreement.paymentStatus)
+                        .opacity(0.10)
+                )
+                .clipShape(Capsule())
+            }
         }
+        .padding(14)
+        .background(.white)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 14
+            )
+        )
+    }
 
-        return "\(agreement.exchangeType.rawValue) · \(formattedAmount(agreement.amount))"
+
+    // MARK: - Payment Status Color
+
+    private func paymentStatusColor(
+        _ status: PaymentStatus
+    ) -> Color {
+
+        switch status {
+        case .pending:
+            return .orange
+
+        case .paid:
+            return Color(
+                red: 0.00,
+                green: 0.55,
+                blue: 0.45
+            )
+
+        case .notApplicable:
+            return .gray
+        }
+    }
+
+
+    // MARK: - Warning Note
+
+    private var warningNote: some View {
+
+        HStack(
+            alignment: .top,
+            spacing: 8
+        ) {
+
+            Image(
+                systemName: "exclamationmark.triangle.fill"
+            )
+            .font(.system(size: 11))
+            .foregroundStyle(
+                Color(
+                    red: 0.80,
+                    green: 0.60,
+                    blue: 0.10
+                )
+            )
+
+            Text(
+                "Before confirming, make sure you both agree on the details above."
+            )
+            .font(.system(size: 8))
+            .foregroundStyle(
+                Color(
+                    red: 0.55,
+                    green: 0.42,
+                    blue: 0.05
+                )
+            )
+        }
+        .padding(12)
+        .background(
+            Color(
+                red: 1.0,
+                green: 0.95,
+                blue: 0.80
+            )
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 11
+            )
+        )
+    }
+
+
+    // MARK: - Cancel Link
+
+    private var cancelLink: some View {
+
+        Button {
+            dismiss()
+        } label: {
+
+            Text("Cancel")
+                .font(
+                    .system(
+                        size: 10,
+                        weight: .semibold
+                    )
+                )
+                .foregroundStyle(.gray)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
     }
 
 

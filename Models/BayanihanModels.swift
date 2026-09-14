@@ -261,12 +261,13 @@ enum PaymentStatus: String, CaseIterable, Identifiable {
 // MARK: - Activity
 
 struct CommunityActivity: Identifiable {
-    
+
     let id: UUID
-    
+
     var message: String
     var date: Date
     var type: ActivityType
+    var actorName: String = "You"
 }
 
 

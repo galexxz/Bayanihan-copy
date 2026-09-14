@@ -144,55 +144,103 @@ struct HelpStatusView: View {
                         alignment: .leading,
                         spacing: 9
                     ) {
-                        
-                        HStack(spacing: 9) {
-                            
-                            Image(
-                                systemName: request.category.icon
-                            )
-                            .font(.system(size: 12))
-                            .foregroundStyle(
-                                Color(
-                                    red: 0.00,
-                                    green: 0.55,
-                                    blue: 0.45
+
+                        HStack(spacing: 10) {
+
+                            ZStack {
+
+                                RoundedRectangle(
+                                    cornerRadius: 10
                                 )
-                            )
-                            
-                            Text(request.title)
-                                .font(
-                                    .system(
-                                        size: 10,
-                                        weight: .semibold
+                                .fill(
+                                    Color(
+                                        red: 0.84,
+                                        green: 0.93,
+                                        blue: 0.90
                                     )
                                 )
-                                .foregroundStyle(.black)
-                                .lineLimit(2)
-                            
+
+                                Image(
+                                    systemName: request.category.icon
+                                )
+                                .font(.system(size: 13))
+                                .foregroundStyle(
+                                    Color(
+                                        red: 0.00,
+                                        green: 0.55,
+                                        blue: 0.45
+                                    )
+                                )
+                            }
+                            .frame(
+                                width: 43,
+                                height: 43
+                            )
+
+                            VStack(
+                                alignment: .leading,
+                                spacing: 4
+                            ) {
+
+                                HStack(spacing: 5) {
+
+                                    UrgencyBadge(
+                                        urgency: request.urgency
+                                    )
+
+                                    MyRequestStatusBadge(
+                                        status: request.status
+                                    )
+                                }
+
+                                Text(request.title)
+                                    .font(
+                                        .system(
+                                            size: 10,
+                                            weight: .semibold
+                                        )
+                                    )
+                                    .foregroundStyle(.black)
+                                    .lineLimit(2)
+                            }
+
                             Spacer()
                         }
-                        
+
+                        Label(
+                            request.requesterName,
+                            systemImage: "person.fill"
+                        )
+                        .font(.system(size: 7))
+                        .foregroundStyle(.gray)
+
                         Text(request.description)
                             .font(.system(size: 8))
                             .foregroundStyle(.gray)
                             .lineSpacing(2)
-                        
+
                         Divider()
-                        
+
                         HStack(spacing: 12) {
-                            
+
                             Label(
                                 request.location,
                                 systemImage: "mappin.and.ellipse"
                             )
-                            
+
                             Label(
                                 request.time,
                                 systemImage: "clock"
                             )
+
+                            Spacer()
                         }
                         .font(.system(size: 7))
                         .foregroundStyle(.gray)
+
+                        Text(timeAgo)
+                            .font(.system(size: 6))
+                            .foregroundStyle(.gray.opacity(0.7))
                     }
                     .padding(14)
                     .background(.white)
@@ -306,34 +354,25 @@ struct HelpStatusView: View {
                         .padding(.top, 23)
                     
                     VStack(spacing: 0) {
-                        
-                        StatusStepRow(
-                            title: "Request Posted",
-                            subtitle: "Your request is visible to the community.",
-                            icon: "checkmark.circle.fill",
-                            isCompleted: true,
-                            isLast: request.status == .open
-                        )
-                        
-                        if request.status != .open {
-                            
+
+                        ForEach(
+                            Array(
+                                timelineSteps.enumerated()
+                            ),
+                            id: \.offset
+                        ) { index, step in
+
                             StatusStepRow(
-                                title: "Helper Connected",
-                                subtitle: "A community member is helping.",
-                                icon: "hands.sparkles.fill",
-                                isCompleted: true,
-                                isLast: request.status == .inDiscussion
-                            )
-                        }
-                        
-                        if request.status == .completed {
-                            
-                            StatusStepRow(
-                                title: "Completed",
-                                subtitle: "The request has been successfully completed.",
-                                icon: "checkmark.seal.fill",
-                                isCompleted: true,
-                                isLast: true
+                                title: step.title,
+                                subtitle: step.subtitle,
+                                icon: step.icon,
+                                isCompleted:
+                                    statusRank(request.status) >=
+                                    statusRank(step.status),
+                                isCurrent:
+                                    statusRank(request.status) ==
+                                    statusRank(step.status),
+                                isLast: index == timelineSteps.count - 1
                             )
                         }
                     }
@@ -547,8 +586,113 @@ struct HelpStatusView: View {
             return "checkmark.seal.fill"
         }
     }
-    
-    
+
+
+    // MARK: - Time Ago
+
+    private var timeAgo: String {
+
+        let interval = Date().timeIntervalSince(request.createdAt)
+
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
+        let days = Int(interval / 86400)
+
+        if minutes < 1 {
+            return "Just now"
+
+        } else if minutes < 60 {
+            return "\(minutes)m ago"
+
+        } else if hours < 24 {
+            return "\(hours)h ago"
+
+        } else if days == 1 {
+            return "Yesterday"
+
+        } else if days < 7 {
+            return "\(days)d ago"
+
+        } else {
+
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+
+            return formatter.string(from: request.createdAt)
+        }
+    }
+
+
+    // MARK: - Timeline Steps
+
+    private var timelineSteps: [
+        (
+            status: CommunityRequestStatus,
+            title: String,
+            subtitle: String,
+            icon: String
+        )
+    ] {
+        [
+            (
+                .open,
+                "Request Posted",
+                "Your request is visible to the community.",
+                "checkmark.circle.fill"
+            ),
+            (
+                .inDiscussion,
+                "Helper Connected",
+                "A community member is helping.",
+                "hands.sparkles.fill"
+            ),
+            (
+                .confirmed,
+                "Help Confirmed",
+                "The help agreement has been confirmed.",
+                "handshake.fill"
+            ),
+            (
+                .inProgress,
+                "Help In Progress",
+                "Help is currently underway.",
+                "figure.walk"
+            ),
+            (
+                .completed,
+                "Completed",
+                "The request has been successfully completed.",
+                "checkmark.seal.fill"
+            )
+        ]
+    }
+
+
+    // MARK: - Status Rank
+
+    private func statusRank(
+        _ status: CommunityRequestStatus
+    ) -> Int {
+
+        switch status {
+        case .open:
+            return 0
+
+        case .inDiscussion:
+            return 1
+
+        case .confirmed:
+            return 2
+
+        case .inProgress:
+            return 3
+
+        case .completed:
+            return 4
+        }
+    }
+
+
     // MARK: - Initials
     
     private func initials(
@@ -573,46 +717,68 @@ struct HelpStatusView: View {
 // MARK: - Status Step Row
 
 struct StatusStepRow: View {
-    
+
     let title: String
     let subtitle: String
     let icon: String
     let isCompleted: Bool
+    var isCurrent: Bool = false
     let isLast: Bool
-    
+
     var body: some View {
-        
+
         HStack(
             alignment: .top,
             spacing: 11
         ) {
-            
+
             VStack(spacing: 0) {
-                
-                Image(
-                    systemName: icon
-                )
-                .font(.system(size: 15))
-                .foregroundStyle(
-                    isCompleted
-                        ? Color(
-                            red: 0.00,
-                            green: 0.55,
-                            blue: 0.45
-                        )
-                        : .gray
-                )
-                
-                if !isLast {
-                    
-                    Rectangle()
-                        .fill(
-                            Color(
+
+                ZStack {
+
+                    if isCurrent {
+
+                        Circle()
+                            .fill(
+                                Color(
+                                    red: 0.00,
+                                    green: 0.55,
+                                    blue: 0.45
+                                )
+                                .opacity(0.12)
+                            )
+                            .frame(
+                                width: 26,
+                                height: 26
+                            )
+                    }
+
+                    Image(
+                        systemName: icon
+                    )
+                    .font(.system(size: 15))
+                    .foregroundStyle(
+                        isCompleted
+                            ? Color(
                                 red: 0.00,
                                 green: 0.55,
                                 blue: 0.45
                             )
-                            .opacity(0.25)
+                            : .gray.opacity(0.5)
+                    )
+                }
+
+                if !isLast {
+
+                    Rectangle()
+                        .fill(
+                            isCompleted
+                                ? Color(
+                                    red: 0.00,
+                                    green: 0.55,
+                                    blue: 0.45
+                                ).opacity(0.25)
+                                : Color.gray.opacity(0.15)
                         )
                         .frame(
                             width: 1,
@@ -622,28 +788,61 @@ struct StatusStepRow: View {
                 }
             }
             .frame(width: 25)
-            
+
             VStack(
                 alignment: .leading,
                 spacing: 3
             ) {
-                
+
                 Text(title)
                     .font(
                         .system(
                             size: 9,
-                            weight: .semibold
+                            weight: isCurrent ? .bold : .semibold
                         )
                     )
-                    .foregroundStyle(.black)
-                
+                    .foregroundStyle(
+                        isCompleted
+                            ? .black
+                            : .gray
+                    )
+
                 Text(subtitle)
                     .font(.system(size: 7))
                     .foregroundStyle(.gray)
             }
             .padding(.top, 1)
-            
+
             Spacer()
+
+            if isCurrent {
+
+                Text("Current")
+                    .font(
+                        .system(
+                            size: 6,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundStyle(
+                        Color(
+                            red: 0.00,
+                            green: 0.55,
+                            blue: 0.45
+                        )
+                    )
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(
+                        Color(
+                            red: 0.00,
+                            green: 0.55,
+                            blue: 0.45
+                        )
+                        .opacity(0.10)
+                    )
+                    .clipShape(Capsule())
+            }
         }
         .padding(.vertical, 7)
     }

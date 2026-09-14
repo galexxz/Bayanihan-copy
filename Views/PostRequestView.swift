@@ -10,8 +10,9 @@ struct PostRequestView: View {
     @State private var selectedCategory: RequestCategory = .other
     @State private var selectedUrgency: RequestUrgency = .normal
     @State private var location = ""
+    @State private var requestDate = Date()
     @State private var time = ""
-    @State private var peopleNeeded = "1"
+    @State private var peopleNeeded = ""
     
     @State private var showValidationAlert = false
     @State private var validationMessage = ""
@@ -37,8 +38,8 @@ struct PostRequestView: View {
                     ) {
                         
                         // MARK: - Header
-                        
-                        Text("Ask for Help")
+
+                        Text("Post a Request")
                             .font(
                                 .system(
                                     size: 22,
@@ -47,24 +48,24 @@ struct PostRequestView: View {
                             )
                             .foregroundStyle(.black)
                             .padding(.top, 15)
-                        
+
                         Text(
                             "Tell your community what you need."
                         )
                         .font(.system(size: 9))
                         .foregroundStyle(.gray)
                         .padding(.top, 4)
-                        
-                        
+
+
                         // MARK: - Request Title
-                        
+
                         FormFieldTitle(
-                            title: "What do you need help with?"
+                            title: "Request Title *"
                         )
                         .padding(.top, 20)
-                        
+
                         TextField(
-                            "Example: Need help buying groceries",
+                            "What do you need help with?",
                             text: $title
                         )
                         .font(.system(size: 9))
@@ -83,7 +84,7 @@ struct PostRequestView: View {
                         // MARK: - Description
                         
                         FormFieldTitle(
-                            title: "Description"
+                            title: "Description *"
                         )
                         .padding(.top, 17)
                         
@@ -234,7 +235,7 @@ struct PostRequestView: View {
                         // MARK: - Location
                         
                         FormFieldTitle(
-                            title: "Location"
+                            title: "Location *"
                         )
                         .padding(.top, 17)
                         
@@ -268,12 +269,41 @@ struct PostRequestView: View {
                             )
                         )
                         .padding(.top, 8)
-                        
-                        
-                        // MARK: - Time
-                        
+
+
+                        // MARK: - Date
+
                         FormFieldTitle(
-                            title: "Preferred Time"
+                            title: "Date (optional)"
+                        )
+                        .padding(.top, 17)
+
+                        DatePicker(
+                            "",
+                            selection: $requestDate,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .padding(.horizontal, 12)
+                        .frame(height: 45)
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .leading
+                        )
+                        .background(.white)
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius: 11
+                            )
+                        )
+                        .padding(.top, 8)
+
+
+                        // MARK: - Time
+
+                        FormFieldTitle(
+                            title: "Preferred Time (optional)"
                         )
                         .padding(.top, 17)
                         
@@ -310,28 +340,30 @@ struct PostRequestView: View {
                         
                         
                         // MARK: - People Needed
-                        
+
                         FormFieldTitle(
-                            title: "People Needed"
+                            title: "People Needed (optional)"
                         )
                         .padding(.top, 17)
-                        
+
                         HStack {
-                            
+
                             TextField(
-                                "1",
+                                "e.g. 1",
                                 text: $peopleNeeded
                             )
                             .keyboardType(.numberPad)
                             .font(.system(size: 9))
                             .foregroundStyle(.black)
-                            
+
                             Text(
-                                "person\(peopleNeeded == "1" ? "" : "s")"
+                                peopleNeeded == "1"
+                                    ? "person"
+                                    : "people"
                             )
                             .font(.system(size: 8))
                             .foregroundStyle(.gray)
-                            
+
                             Spacer()
                         }
                         .padding(.horizontal, 12)
@@ -391,7 +423,7 @@ struct PostRequestView: View {
                     .padding(.horizontal, 20)
                 }
             }
-            .navigationTitle("New Request")
+            .navigationTitle("Post a Request")
             .navigationBarTitleDisplayMode(.inline)
             .alert(
                 "Unable to Post Request",
@@ -433,56 +465,63 @@ struct PostRequestView: View {
             .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
-        
+
         let cleanPeople = peopleNeeded
             .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
-        
+
+        // MARK: Required fields
+
         guard !cleanTitle.isEmpty else {
             showValidation(
                 "Please enter a title for your request."
             )
             return
         }
-        
+
         guard !cleanDescription.isEmpty else {
             showValidation(
                 "Please describe the help you need."
             )
             return
         }
-        
+
         guard !cleanLocation.isEmpty else {
             showValidation(
                 "Please enter the location."
             )
             return
         }
-        
-        guard !cleanTime.isEmpty else {
-            showValidation(
-                "Please enter when help is needed."
-            )
-            return
+
+        // MARK: Optional fields
+
+        // People Needed is optional — defaults to 1 when left blank,
+        // but if the user types something, it must be a valid positive
+        // number so it doesn't get passed to the model as garbage.
+        var numberOfPeople = 1
+
+        if !cleanPeople.isEmpty {
+
+            guard
+                let parsedPeople = Int(cleanPeople),
+                parsedPeople > 0
+            else {
+                showValidation(
+                    "People needed must be a valid number."
+                )
+                return
+            }
+
+            numberOfPeople = parsedPeople
         }
-        
-        guard
-            let numberOfPeople = Int(cleanPeople),
-            numberOfPeople > 0
-        else {
-            showValidation(
-                "People needed must be at least 1."
-            )
-            return
-        }
-        
+
         controller.addRequest(
             title: cleanTitle,
             description: cleanDescription,
             category: selectedCategory,
             location: cleanLocation,
-            date: Date(),
+            date: requestDate,
             time: cleanTime,
             peopleNeeded: numberOfPeople,
             urgency: selectedUrgency

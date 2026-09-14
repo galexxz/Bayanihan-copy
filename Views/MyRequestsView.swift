@@ -1,13 +1,46 @@
 import SwiftUI
 
 struct MyRequestsView: View {
-    
+
     @Environment(BayanihanController.self) private var controller
-    
+
+    @State private var showHelped: Bool
+
+    init(
+        showHelped: Bool = false
+    ) {
+        self._showHelped = State(
+            initialValue: showHelped
+        )
+    }
+
     private var myRequests: [CommunityRequest] {
-        controller.requests.filter {
-            $0.requesterUsername == controller.currentUser.username
+
+        controller.requests.filter { request in
+
+            showHelped
+                ? request.helperName == controller.currentUser.name
+                : request.requesterUsername == controller.currentUser.username
         }
+    }
+
+    private var screenTitle: String {
+        showHelped ? "Helped Requests" : "My Requests"
+    }
+
+    private var screenSubtitle: String {
+        showHelped
+            ? "Manage the help requests you're assisting with."
+            : "Manage the help requests you have posted."
+    }
+
+    private var countLabel: String {
+
+        let count = myRequests.count
+        let noun = count == 1 ? "request" : "requests"
+        let verb = showHelped ? "helped" : "posted"
+
+        return "\(count) \(noun) \(verb)"
     }
     
     var body: some View {
@@ -30,7 +63,7 @@ struct MyRequestsView: View {
                         
                         // MARK: - Header
                         
-                        Text("My Requests")
+                        Text(screenTitle)
                             .font(
                                 .system(
                                     size: 22,
@@ -39,27 +72,49 @@ struct MyRequestsView: View {
                             )
                             .foregroundStyle(.black)
                             .padding(.top, 15)
-                        
-                        Text(
-                            "Manage the help requests you have posted."
-                        )
+
+                        Text(screenSubtitle)
                         .font(.system(size: 9))
                         .foregroundStyle(.gray)
                         .padding(.top, 4)
-                        
-                        
+
+
+                        // MARK: - Segmented Control
+
+                        Picker(
+                            "",
+                            selection: $showHelped
+                        ) {
+
+                            Text("My Requests")
+                                .tag(false)
+
+                            Text("Helped")
+                                .tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .tint(
+                            Color(
+                                red: 0.00,
+                                green: 0.55,
+                                blue: 0.45
+                            )
+                        )
+                        .padding(.top, 15)
+
+
                         // MARK: - Request Count
-                        
+
                         HStack {
-                            
+
                             Image(
-                                systemName: "hand.raised.fill"
+                                systemName: showHelped
+                                    ? "hands.sparkles.fill"
+                                    : "hand.raised.fill"
                             )
                             .font(.system(size: 10))
-                            
-                            Text(
-                                "\(myRequests.count) request\(myRequests.count == 1 ? "" : "s") posted"
-                            )
+
+                            Text(countLabel)
                             .font(
                                 .system(
                                     size: 8,
@@ -97,9 +152,11 @@ struct MyRequestsView: View {
                         // MARK: - Requests
                         
                         if myRequests.isEmpty {
-                            
-                            EmptyMyRequestsView()
-                                .padding(.top, 45)
+
+                            EmptyMyRequestsView(
+                                showHelped: showHelped
+                            )
+                            .padding(.top, 45)
                             
                         } else {
                             
@@ -116,9 +173,10 @@ struct MyRequestsView: View {
                                         )
                                         
                                     } label: {
-                                        
+
                                         MyRequestCard(
-                                            request: request
+                                            request: request,
+                                            isHelpedContext: showHelped
                                         )
                                     }
                                     .buttonStyle(.plain)
@@ -132,7 +190,7 @@ struct MyRequestsView: View {
                     .padding(.horizontal, 20)
                 }
             }
-            .navigationTitle("My Requests")
+            .navigationTitle(screenTitle)
             .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -141,20 +199,21 @@ struct MyRequestsView: View {
 // MARK: - My Request Card
 
 struct MyRequestCard: View {
-    
+
     let request: CommunityRequest
-    
+    var isHelpedContext: Bool = false
+
     var body: some View {
-        
+
         VStack(
             alignment: .leading,
             spacing: 9
         ) {
-            
+
             HStack(spacing: 10) {
-                
+
                 ZStack {
-                    
+
                     RoundedRectangle(
                         cornerRadius: 10
                     )
@@ -165,7 +224,7 @@ struct MyRequestCard: View {
                             blue: 0.90
                         )
                     )
-                    
+
                     Image(
                         systemName: request.category.icon
                     )
@@ -182,29 +241,23 @@ struct MyRequestCard: View {
                     width: 43,
                     height: 43
                 )
-                
+
                 VStack(
                     alignment: .leading,
                     spacing: 4
                 ) {
-                    
-                    Text(
-                        request.category.rawValue.uppercased()
-                    )
-                    .font(
-                        .system(
-                            size: 6,
-                            weight: .bold
+
+                    HStack(spacing: 5) {
+
+                        UrgencyBadge(
+                            urgency: request.urgency
                         )
-                    )
-                    .foregroundStyle(
-                        Color(
-                            red: 0.00,
-                            green: 0.55,
-                            blue: 0.45
+
+                        MyRequestStatusBadge(
+                            status: request.status
                         )
-                    )
-                    
+                    }
+
                     Text(request.title)
                         .font(
                             .system(
@@ -215,48 +268,71 @@ struct MyRequestCard: View {
                         .foregroundStyle(.black)
                         .lineLimit(2)
                 }
-                
+
                 Spacer()
-                
-                MyRequestStatusBadge(
-                    status: request.status
-                )
             }
-            
-            
+
+
             Text(request.description)
                 .font(.system(size: 8))
                 .foregroundStyle(.gray)
                 .lineLimit(2)
-            
-            
+
+
             HStack(spacing: 12) {
-                
+
                 Label(
                     request.location,
                     systemImage: "mappin.and.ellipse"
                 )
-                
+
                 Label(
                     request.time,
                     systemImage: "clock"
                 )
-                
+
                 Spacer()
             }
             .font(.system(size: 7))
             .foregroundStyle(.gray)
-            
-            
-            if let helperName = request.helperName {
-                
+
+
+            if isHelpedContext {
+
                 HStack(spacing: 5) {
-                    
+
+                    Image(
+                        systemName: "person.circle.fill"
+                    )
+                    .font(.system(size: 7))
+
+                    Text(
+                        "Requester: \(request.requesterName)"
+                    )
+                    .font(
+                        .system(
+                            size: 7,
+                            weight: .semibold
+                        )
+                    )
+                }
+                .foregroundStyle(
+                    Color(
+                        red: 0.00,
+                        green: 0.55,
+                        blue: 0.45
+                    )
+                )
+
+            } else if let helperName = request.helperName {
+
+                HStack(spacing: 5) {
+
                     Image(
                         systemName: "hands.sparkles.fill"
                     )
                     .font(.system(size: 7))
-                    
+
                     Text(
                         "Helper: \(helperName)"
                     )
@@ -275,6 +351,11 @@ struct MyRequestCard: View {
                     )
                 )
             }
+
+
+            Text(timeAgo)
+                .font(.system(size: 6))
+                .foregroundStyle(.gray.opacity(0.7))
         }
         .padding(13)
         .background(.white)
@@ -283,6 +364,41 @@ struct MyRequestCard: View {
                 cornerRadius: 14
             )
         )
+    }
+
+
+    // MARK: - Time Ago
+
+    private var timeAgo: String {
+
+        let interval = Date().timeIntervalSince(request.createdAt)
+
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
+        let days = Int(interval / 86400)
+
+        if minutes < 1 {
+            return "Just now"
+
+        } else if minutes < 60 {
+            return "\(minutes)m ago"
+
+        } else if hours < 24 {
+            return "\(hours)h ago"
+
+        } else if days == 1 {
+            return "Yesterday"
+
+        } else if days < 7 {
+            return "\(days)d ago"
+
+        } else {
+
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+
+            return formatter.string(from: request.createdAt)
+        }
     }
 }
 
@@ -344,30 +460,40 @@ struct MyRequestStatusBadge: View {
 // MARK: - Empty State
 
 struct EmptyMyRequestsView: View {
-    
+
+    var showHelped: Bool = false
+
     var body: some View {
-        
+
         VStack(spacing: 10) {
-            
+
             Image(
-                systemName: "hand.raised.slash"
+                systemName: showHelped
+                    ? "hands.sparkles"
+                    : "hand.raised.slash"
             )
             .font(.system(size: 34))
             .foregroundStyle(
                 .gray.opacity(0.45)
             )
-            
-            Text("No Requests Yet")
-                .font(
-                    .system(
-                        size: 14,
-                        weight: .bold
-                    )
-                )
-                .foregroundStyle(.black)
-            
+
             Text(
-                "Requests you post for your community will appear here."
+                showHelped
+                    ? "No Helped Requests Yet"
+                    : "No Requests Yet"
+            )
+            .font(
+                .system(
+                    size: 14,
+                    weight: .bold
+                )
+            )
+            .foregroundStyle(.black)
+
+            Text(
+                showHelped
+                    ? "Requests you help with will appear here."
+                    : "Requests you post for your community will appear here."
             )
             .font(.system(size: 9))
             .foregroundStyle(.gray)
