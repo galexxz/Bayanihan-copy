@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 @Observable
 final class BayanihanController {
 
@@ -10,7 +11,7 @@ final class BayanihanController {
 
 
     // MARK: - Current User
-    
+
     var currentUser = BayanihanUser(
         name: "Alex Rivera",
         username: "@alexrivera",
@@ -20,12 +21,12 @@ final class BayanihanController {
         requestsHelped: 3,
         communityPoints: 12
     )
-    
-    
+
+
     // MARK: - Requests
-    
+
     var requests: [CommunityRequest] = [
-        
+
         CommunityRequest(
             title: "Groceries for a Senior Citizen",
             description: "Maria needs help getting groceries for her elderly mother.",
@@ -39,7 +40,7 @@ final class BayanihanController {
             requesterUsername: "@mariasantos",
             status: .open
         ),
-        
+
         CommunityRequest(
             title: "Medical Supplies Needed",
             description: "A family in the community needs assistance obtaining medical supplies.",
@@ -53,7 +54,7 @@ final class BayanihanController {
             requesterUsername: "@juandelacruz",
             status: .open
         ),
-        
+
         CommunityRequest(
             title: "School Supplies for Children",
             description: "Three children need school supplies before the start of classes.",
@@ -67,7 +68,7 @@ final class BayanihanController {
             requesterUsername: "@anareyes",
             status: .open
         ),
-        
+
         CommunityRequest(
             title: "Community Clean-up",
             description: "Volunteers are needed for a neighborhood clean-up activity.",
@@ -82,12 +83,12 @@ final class BayanihanController {
             status: .open
         )
     ]
-    
-    
+
+
     // MARK: - Activities
-    
+
     var activities: [CommunityActivity] = [
-        
+
         CommunityActivity(
             id: UUID(),
             message: "Volunteered to help Maria Santos.",
@@ -167,8 +168,127 @@ final class BayanihanController {
     var helpAgreements: [HelpAgreement] = []
 
 
+    // MARK: - Persistence
+
+    // Step 3: local SwiftData-backed storage. Views never see this — the
+    // Controller keeps its existing in-memory arrays/properties above as
+    // the single source of truth for the UI, and mirrors changes into
+    // `dataStore` so they survive relaunch.
+    private let dataStore: BayanihanDataStore
+
+    // BayanihanUser (Models/BayanihanModels.swift) has no `id` of its own,
+    // so the Controller tracks the id of its persisted record here to make
+    // sure profile saves update the same PersistedUser row instead of
+    // inserting a new one each time.
+    private var currentUserID: UUID
+
+
+    // MARK: - Init
+
+    init() {
+
+        dataStore = Self.makeDataStore()
+
+        if dataStore.hasSeededData() {
+
+            // Later launch: restore everything from SwiftData instead of
+            // using the demo values declared above.
+
+            if let persistedUser = dataStore.loadUsers().first {
+                currentUserID = persistedUser.id
+                currentUser = BayanihanUser(persisted: persistedUser)
+            } else {
+                // Defensive fallback: hasSeededData() found a user record
+                // but loading it back failed. Keep the in-memory demo user
+                // usable and persist it under a fresh id.
+                currentUserID = UUID()
+                dataStore.saveUser(currentUser.toPersisted(id: currentUserID))
+            }
+
+            requests = dataStore.loadRequests().map(CommunityRequest.init(persisted:))
+            activities = dataStore.loadActivities().map(CommunityActivity.init(persisted:))
+            chatMessages = dataStore.loadChatMessages().map(ChatMessage.init(persisted:))
+            helpAgreements = dataStore.loadHelpAgreements().map(HelpAgreement.init(persisted:))
+            notifications = dataStore.loadNotifications().map(CommunityNotification.init(persisted:))
+
+        } else {
+
+            // First launch: the demo/seed data declared above (currentUser,
+            // requests, activities, notifications) is the source of truth.
+            // Save it once so future launches load from SwiftData instead
+            // of reseeding.
+
+            currentUserID = UUID()
+            dataStore.saveUser(currentUser.toPersisted(id: currentUserID))
+
+            for request in requests {
+                dataStore.saveRequest(request.toPersisted())
+            }
+
+            for activity in activities {
+                dataStore.saveActivity(activity.toPersisted())
+            }
+
+            for notification in notifications {
+                dataStore.saveNotification(notification.toPersisted())
+            }
+
+            // chatMessages and helpAgreements start empty in the demo data,
+            // so there is nothing to seed for them yet.
+        }
+    }
+
+
+    // MARK: - DataStore Creation
+
+    /// Builds the DataStore without ever using `try!`, a force unwrap, or
+    /// `fatalError()`. Tries the normal persistent store first; if that
+    /// fails, falls back to an in-memory store (BayanihanDataStore already
+    /// attempts this same fallback internally, so reaching the retry loop
+    /// below means even a fresh in-memory container — built from this
+    /// app's own valid, hardcoded schema — failed too, which is not
+    /// expected to happen in practice).
+    private static func makeDataStore() -> BayanihanDataStore {
+
+        if let store = try? BayanihanDataStore(inMemory: false) {
+            return store
+        }
+
+        print("BayanihanController: Persistent DataStore unavailable — falling back to an in-memory store.")
+
+        while true {
+            if let store = try? BayanihanDataStore(inMemory: true) {
+                return store
+            }
+        }
+    }
+
+
+    // MARK: - Persist Helpers
+
+    private func persist(_ request: CommunityRequest) {
+        dataStore.saveRequest(request.toPersisted())
+    }
+
+    private func persist(_ activity: CommunityActivity) {
+        dataStore.saveActivity(activity.toPersisted())
+    }
+
+    private func persist(_ agreement: HelpAgreement) {
+        dataStore.saveHelpAgreement(agreement.toPersisted())
+    }
+
+    private func persist(_ message: ChatMessage) {
+        dataStore.saveChatMessage(message.toPersisted())
+    }
+
+    private func persistCurrentUser() {
+        dataStore.saveUser(currentUser.toPersisted(id: currentUserID))
+    }
+
+
     // MARK: - Add Request
-    
+
     func addRequest(
         title: String,
         description: String,
@@ -179,7 +299,7 @@ final class BayanihanController {
         peopleNeeded: Int,
         urgency: RequestUrgency
     ) {
-        
+
         let newRequest = CommunityRequest(
             title: title,
             description: description,
@@ -199,72 +319,87 @@ final class BayanihanController {
             at: 0
         )
 
+        persist(newRequest)
+
         currentUser.requestsPosted += 1
+        persistCurrentUser()
+
+        let newActivity = CommunityActivity(
+            id: UUID(),
+            message: "Posted “\(newRequest.title).”",
+            date: Date(),
+            type: .posted
+        )
 
         activities.insert(
-            CommunityActivity(
-                id: UUID(),
-                message: "Posted “\(newRequest.title).”",
-                date: Date(),
-                type: .posted
-            ),
+            newActivity,
             at: 0
         )
+
+        persist(newActivity)
     }
-    
-    
+
+
     // MARK: - Get Request
-    
+
     func request(
         withID id: UUID
     ) -> CommunityRequest? {
-        
+
         requests.first {
             $0.id == id
         }
     }
-    
-    
+
+
     // MARK: - Offer Help
-    
+
     func offerHelp(
         for requestID: UUID
     ) {
-        
+
         guard let index = requests.firstIndex(
             where: { $0.id == requestID }
         ) else {
             return
         }
-        
+
         requests[index].status = .inDiscussion
         requests[index].helperName = currentUser.name
-        
+
+        persist(requests[index])
+
+        let newActivity = CommunityActivity(
+            id: UUID(),
+            message: "Offered to help with “\(requests[index].title)”.",
+            date: Date(),
+            type: .volunteered
+        )
+
         activities.insert(
-            CommunityActivity(
-                id: UUID(),
-                message: "Offered to help with “\(requests[index].title)”.",
-                date: Date(),
-                type: .volunteered
-            ),
+            newActivity,
             at: 0
         )
+
+        persist(newActivity)
     }
-    
-    
+
+
     // MARK: - Confirm Help
-    
+
     func confirmHelp(
         for requestID: UUID
     ) {
-        
+
         guard let index = requests.firstIndex(
             where: { $0.id == requestID }
         ) else {
             return
         }
-        
+
         requests[index].status = .confirmed
+
+        persist(requests[index])
     }
 
 
@@ -313,6 +448,8 @@ final class BayanihanController {
             newAgreement,
             at: 0
         )
+
+        persist(newAgreement)
     }
 
 
@@ -334,6 +471,8 @@ final class BayanihanController {
         helpAgreements[index].isConfirmedByRequester = true
         helpAgreements[index].isConfirmedByHelper = true
 
+        persist(helpAgreements[index])
+
         confirmHelp(for: requestID)
     }
 
@@ -352,51 +491,61 @@ final class BayanihanController {
         }
 
         helpAgreements[index].paymentStatus = status
+
+        persist(helpAgreements[index])
     }
 
 
     // MARK: - Start Help
-    
+
     func startHelp(
         for requestID: UUID
     ) {
-        
+
         guard let index = requests.firstIndex(
             where: { $0.id == requestID }
         ) else {
             return
         }
-        
+
         requests[index].status = .inProgress
+
+        persist(requests[index])
     }
-    
-    
+
+
     // MARK: - Complete Help
-    
+
     func completeHelp(
         for requestID: UUID
     ) {
-        
+
         guard let index = requests.firstIndex(
             where: { $0.id == requestID }
         ) else {
             return
         }
-        
+
         requests[index].status = .completed
-        
+        persist(requests[index])
+
         currentUser.requestsHelped += 1
         currentUser.communityPoints += 3
-        
+        persistCurrentUser()
+
+        let newActivity = CommunityActivity(
+            id: UUID(),
+            message: "Completed “\(requests[index].title)”.",
+            date: Date(),
+            type: .volunteered
+        )
+
         activities.insert(
-            CommunityActivity(
-                id: UUID(),
-                message: "Completed “\(requests[index].title)”.",
-                date: Date(),
-                type: .volunteered
-            ),
+            newActivity,
             at: 0
         )
+
+        persist(newActivity)
     }
 
 
@@ -422,14 +571,18 @@ final class BayanihanController {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
 
+        let now = Date()
+
         let newMessage = ChatMessage(
             requestID: requestID,
             senderUsername: currentUser.username,
             text: text,
-            time: formatter.string(from: Date())
+            time: formatter.string(from: now)
         )
 
         chatMessages.append(newMessage)
+
+        dataStore.saveChatMessage(newMessage.toPersisted(createdAt: now))
     }
 
 
@@ -446,12 +599,17 @@ final class BayanihanController {
         currentUser.username = username
         currentUser.email = email
         currentUser.location = location
+
+        persistCurrentUser()
     }
 
 
     // MARK: - Logout
 
     func logout() {
+        // Ends the session only. Persisted profile/data intentionally stay
+        // in SwiftData so they are still there the next time the user logs
+        // in — only `isLoggedIn` is session state, never persisted.
         isLoggedIn = false
     }
 }
